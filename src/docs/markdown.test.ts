@@ -13,4 +13,15 @@ describe('markdown parser', () => {
     expect(parsed.title).toBeUndefined()
     expect(parsed.body).toBe('# Just text')
   })
+
+  it('replaces {base.url} placeholders in markdown body', () => {
+    const parsed = parseMarkdownDoc('[Button]({base.url}/examples/button)', 'http://localhost:8080')
+    expect(parsed.body).toContain('http://localhost:8080/examples/button/')
+    expect(parsed.body).not.toContain('{base.url}')
+  })
+
+  it('normalizes iframe example src to trailing slash', () => {
+    const parsed = parseMarkdownDoc('<iframe src="{base.url}/examples/button"></iframe>', 'http://localhost:5173')
+    expect(parsed.body).toContain('http://localhost:5173/examples/button/')
+  })
 })

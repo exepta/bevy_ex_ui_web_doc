@@ -1,5 +1,6 @@
 .app-shell {
   min-height: 100vh;
+  position: relative;
 }
 
 .top-header {
@@ -76,6 +77,58 @@
 .icon-button svg {
   width: 18px;
   height: 18px;
+}
+
+.accent-color-button {
+  position: relative;
+}
+
+.accent-color-dot {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: 1px solid var(--control-bg);
+}
+
+.accent-color-input {
+  width: 220px;
+  height: 120px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 0;
+  background: var(--control-bg);
+  cursor: pointer;
+}
+
+.accent-color-input::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.accent-color-input::-webkit-color-swatch {
+  border: 0;
+  border-radius: 6px;
+}
+
+.accent-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--surface-base) 72%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.accent-modal-card {
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-soft);
+  padding: 1rem;
 }
 
 .language-menu {
@@ -350,10 +403,36 @@
 .markdown-page pre {
   margin: 0.8rem 0;
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
   border-radius: 10px;
   border: 1px solid var(--border-soft);
   background: var(--card-alt);
   padding: 0.8rem;
+}
+
+.markdown-page pre::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.markdown-page pre::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+.markdown-page pre::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--scrollbar-thumb) 0%, var(--scrollbar-thumb-strong) 100%);
+  border-radius: 999px;
+  border: 2px solid var(--scrollbar-track);
+}
+
+.markdown-page pre::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--scrollbar-thumb-strong) 0%, var(--scrollbar-thumb-hover) 100%);
+}
+
+.markdown-page pre::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
 }
 
 .markdown-page code {
@@ -367,6 +446,18 @@
   border: 0;
   padding: 0;
   background: transparent;
+}
+
+.docs-example-frame,
+.markdown-page iframe {
+  width: 100%;
+  min-height: clamp(320px, 56vh, 620px);
+  display: block;
+  border: 1px solid var(--brand-main);
+  border-radius: 12px;
+  box-shadow: none;
+  outline: none;
+  background: var(--card-alt);
 }
 
 .breadcrumb {
@@ -394,6 +485,52 @@
 .docs-section p {
   margin: 0;
   color: var(--text-subtle);
+}
+
+.docs-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--surface-base) 72%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.docs-loading-card {
+  min-width: 180px;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-soft);
+  padding: 1rem 1.1rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.7rem;
+}
+
+.docs-loading-card p {
+  margin: 0;
+  font-size: 0.94rem;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.docs-loading-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid var(--scrollbar-track);
+  border-top-color: var(--brand-main);
+  border-right-color: var(--scrollbar-thumb-strong);
+  animation: docs-spinner-rotate 0.85s linear infinite;
+}
+
+@keyframes docs-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 960px) {

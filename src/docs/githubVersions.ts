@@ -2,55 +2,19 @@ import { latestVersion } from './catalog'
 
 const REPO_OWNER = 'exepta'
 const REPO_NAME = 'bevy_extended_ui'
-const TAGS_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/tags`
-const CONTENTS_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents`
-const MAX_PAGES = 3
-const TAGS_PER_PAGE = 100
+const JSDELIVR_PACKAGE_API_URL = `https://data.jsdelivr.com/v1/package/gh/${REPO_OWNER}/${REPO_NAME}`
+const JSDELIVR_FLAT_API_BASE_URL = `${JSDELIVR_PACKAGE_API_URL}@`
 
-function normalizeTagName(tag: string) {
-  return tag.replace(/^v/i, '')
+function normalizeVersionName(version: string) {
+  return version.replace(/^v/i, '')
+}
+
+function isStableVersion(version: string) {
+  return /^\d+\.\d+\.\d+$/.test(version)
 }
 
 function buildFallbackVersions() {
   return [latestVersion]
-}
-
-async function fetchTagNames() {
-  const allTags: string[] = []
-
-  for (let page = 1; page <= MAX_PAGES; page += 1) {
-    const response = await fetch(`${TAGS_API_URL}?per_page=${TAGS_PER_PAGE}&page=${page}`)
-    if (!response.ok) {
-      throw new Error(`GitHub tags request failed: ${response.status}`)
-    }
-
-    const tags = (await response.json()) as Array<{ name?: string }>
-    const names = tags
-      .map((tag) => tag.name?.trim())
-      .filter((name): name is string => Boolean(name))
-
-    allTags.push(...names)
-
-    if (tags.length < TAGS_PER_PAGE) {
-      break
-    }
-  }
-
-  return allTags
-}
-
-async function hasDocsDirectory(tagName: string) {
-  const response = await fetch(`${CONTENTS_API_URL}/docs?ref=${encodeURIComponent(tagName)}`)
-
-  if (response.status === 404) {
-    return false
-  }
-
-  if (!response.ok) {
-    throw new Error(`GitHub docs check failed for ${tagName}: ${response.status}`)
-  }
-
-  return true
 }
 
 function dedupeVersions(versions: string[]) {
@@ -67,22 +31,100 @@ function dedupeVersions(versions: string[]) {
   return next
 }
 
+function parseSemver(version: string) {
+  const [major, minor, patch] = version.split('.').map((part) => Number.parseInt(part, 10))
+  return { major, minor, patch }
+}
+
+function compareSemverDesc(a: string, b: string) {
+  const left = parseSemver(a)
+  const right = parseSemver(b)
+
+  if (left.major !== right.major) {
+    return right.major - left.major
+  }
+
+  if (left.minor !== right.minor) {
+    return right.minor - left.minor
+  }
+
+  return right.patch - left.patch
+}
+
+function sortVersionsDesc(versions: string[]) {
+  return [...versions].sort(compareSemverDesc)
+}
+
+async function fetchPublishedVersions() {
+  const response = await fetch(JSDELIVR_PACKAGE_API_URL)
+  if (!response.ok) {
+    throw new Error(`jsDelivr versions request failed: ${response.status}`)
+  }
+
+  const payload = (await response.json()) as { versions?: string[] }
+  return (payload.versions ?? [])
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0)
+    .map(normalizeVersionName)
+    .filter(isStableVersion)
+}
+
+async function fetchFlatFilesForRef(ref: string) {
+  const response = await fetch(`${JSDELIVR_FLAT_API_BASE_URL}${encodeURIComponent(ref)}/flat`)
+  if (response.status === 404) {
+    return null
+  }
+
+  if (!response.ok) {
+    throw new Error(`jsDelivr flat request failed for ${ref}: ${response.status}`)
+  }
+
+  const payload = (await response.json()) as { files?: Array<{ name?: string }> }
+  return payload.files ?? []
+}
+
+async function hasDocsDirectory(version: string) {
+  const refCandidates = [version, `v${version}`]
+
+  for (const ref of refCandidates) {
+    const files = await fetchFlatFilesForRef(ref)
+    if (!files) {
+      continue
+    }
+
+    const hasDocs = files.some((entry) => {
+      const name = entry.name?.startsWith('/') ? entry.name.slice(1) : entry.name
+      return Boolean(name?.startsWith('docs/') && name.endsWith('.md'))
+    })
+
+    if (hasDocs) {
+      return true
+    }
+  }
+
+  return false
+}
+
 export async function fetchAvailableVersions() {
   try {
-    const tags = await fetchTagNames()
+    const publishedVersions = sortVersionsDesc(dedupeVersions(await fetchPublishedVersions()))
+    if (publishedVersions.length === 0) {
+      return buildFallbackVersions()
+    }
+
+    const [latestPublished, ...remaining] = publishedVersions
     const checks = await Promise.all(
-      tags.map(async (tag) => ({
-        tag,
-        hasDocs: await hasDocsDirectory(tag),
+      remaining.map(async (version) => ({
+        version,
+        hasDocs: await hasDocsDirectory(version),
       })),
     )
 
     const versionsWithDocs = checks
       .filter((entry) => entry.hasDocs)
-      .map((entry) => normalizeTagName(entry.tag))
-      .filter((version) => version !== latestVersion)
+      .map((entry) => entry.version)
 
-    return dedupeVersions([latestVersion, ...versionsWithDocs])
+    return dedupeVersions([latestPublished, ...versionsWithDocs])
   } catch {
     return buildFallbackVersions()
   }

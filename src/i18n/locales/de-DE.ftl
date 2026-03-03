@@ -7,6 +7,9 @@ language_option_english = Englisch (US)
 language_option_german = Deutsch
 theme_to_dark = Zum Dunkelmodus wechseln
 theme_to_light = Zum Hellmodus wechseln
+accent_color_button_aria = Akzentfarbe
+accent_color_picker_aria = Akzentfarbenwähler
+accent_color_dialog_aria = Akzentfarben-Dialog
 
 section_getting_started = Erste Schritte
 section_widgets = Widgets

@@ -5,12 +5,16 @@ export type ActiveEntry = {
   entry: string
 }
 
+function stripEntryPrefix(entry: string) {
+  return entry.replace(/^\d+_/, '')
+}
+
 export function getDefaultEntry(docs: DocsSection[]): ActiveEntry | null {
   const gettingStarted = docs.find((section) => section.category === 'Getting Started')
-  const overview = gettingStarted?.entries.find((entry) => entry === 'Overview')
+  const overview = gettingStarted?.entries.find((entry) => stripEntryPrefix(entry) === 'Overview')
 
   if (gettingStarted && overview) {
-    return { category: 'Getting Started', entry: 'Overview' }
+    return { category: 'Getting Started', entry: overview }
   }
 
   const firstSection = docs[0]

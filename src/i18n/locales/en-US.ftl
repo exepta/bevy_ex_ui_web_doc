@@ -7,6 +7,9 @@ language_option_english = English (US)
 language_option_german = Deutsch
 theme_to_dark = Switch to dark mode
 theme_to_light = Switch to light mode
+accent_color_button_aria = Accent color
+accent_color_picker_aria = Accent color picker
+accent_color_dialog_aria = Accent color dialog
 
 section_getting_started = Getting Started
 section_widgets = Widgets

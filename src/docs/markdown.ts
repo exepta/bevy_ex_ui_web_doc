@@ -3,6 +3,8 @@ export type ParsedMarkdownDoc = {
   body: string
 }
 
+const baseUrlPlaceholderPattern = /\{base\.url\}/gi
+
 function parseFrontmatter(source: string): ParsedMarkdownDoc {
   if (!source.startsWith('---\n')) {
     return { body: source }
@@ -32,8 +34,18 @@ function normalizeInfoBlocks(source: string) {
   })
 }
 
-export function parseMarkdownDoc(source: string) {
-  const parsed = parseFrontmatter(source)
+function replaceBaseUrlPlaceholder(source: string, baseUrl?: string) {
+  if (!baseUrl) {
+    return source
+  }
+
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, '')
+  const withBaseUrl = source.replace(baseUrlPlaceholderPattern, normalizedBaseUrl)
+  return withBaseUrl.replace(/((?:https?:\/\/[^\s"'()<>]+)?\/examples\/[A-Za-z0-9_-]+)(?=["')\s])/g, '$1/')
+}
+
+export function parseMarkdownDoc(source: string, baseUrl?: string) {
+  const parsed = parseFrontmatter(replaceBaseUrlPlaceholder(source, baseUrl))
   return {
     title: parsed.title,
     body: normalizeInfoBlocks(parsed.body),
