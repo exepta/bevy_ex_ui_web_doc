@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "wasm:build:button": "bash scripts/trunk-build.sh wasm/examples/button",
+    "wasm:build": "pnpm wasm:build:button",
+    "docker:build": "docker build -t bevy-ex-ui-web-doc .",
+    "docker:run": "docker run --rm -p 8080:80 bevy-ex-ui-web-doc",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
@@ -20,7 +24,11 @@
   "dependencies": {
     "@fluent/bundle": "^0.19.1",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.1",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -30,6 +38,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.39.1",

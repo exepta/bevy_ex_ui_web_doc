@@ -1,58 +1,67 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import './App.css'
+import { listDocs, getDocMarkdown, latestVersion, type DocsLocale } from './docs/catalog'
+import MarkdownPage from './docs/MarkdownPage'
+import { parseMarkdownDoc } from './docs/markdown'
+import { fetchAvailableVersions } from './docs/githubVersions'
+import { fetchRemoteDocsBundle, type RemoteDocsBundle } from './docs/githubDocs'
 import { t, type LanguageCode } from './i18n'
-import { widgetComponents, widgetNames, type WidgetName } from './widgets'
+import { createInitialExpanded, getDefaultEntry, type ActiveEntry } from './appState'
 
-const gettingStartedItems = ['overview', 'installation', 'usage', 'exampleProjects', 'faqs'] as const
-const featureItems = [
-  'default',
-  'cssBreakpoints',
-  'wasmBreakpoints',
-  'wasmDefault',
-  'fluent',
-  'propertiesLang',
-  'clipboardWasm',
-] as const
-const cssRuleItems = ['basic', 'mediaQueries', 'keyframes', 'functions'] as const
-const htmlRuleItems = ['structure', 'attributes', 'meta'] as const
-const howToGuideItems = ['site1'] as const
+const DEFAULT_VERSION = latestVersion
+const DEFAULT_DOCS_LOCALE: DocsLocale = 'en_US'
+const initialDocs = listDocs(DEFAULT_VERSION, DEFAULT_DOCS_LOCALE)
+const STORAGE_THEME_KEY = 'bevy_ex_ui_web_doc_theme'
+const STORAGE_LANGUAGE_KEY = 'bevy_ex_ui_web_doc_language'
+const STORAGE_ACCENT_KEY = 'bevy_ex_ui_web_doc_accent'
+const DEFAULT_THEME: 'light' | 'dark' = 'light'
+const DEFAULT_LANGUAGE: LanguageCode = 'en-US'
+const DEFAULT_ACCENT_COLOR = '#195cc7'
+const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/
 
-type SectionId = 'gettingStarted' | 'widgets' | 'features' | 'cssRules' | 'htmlRules' | 'howToGuides'
-
-type ActiveEntry = {
-  section: SectionId
-  item: string
+function getEntryLabel(entry: string) {
+  return entry.replace(/^\d+_/, '')
 }
 
-type ExpandedSections = Record<SectionId, boolean>
-
-const navSections: Array<{ id: SectionId; items: readonly string[] }> = [
-  { id: 'gettingStarted', items: gettingStartedItems },
-  { id: 'widgets', items: widgetNames },
-  { id: 'features', items: featureItems },
-  { id: 'cssRules', items: cssRuleItems },
-  { id: 'htmlRules', items: htmlRuleItems },
-  { id: 'howToGuides', items: howToGuideItems },
-]
-
-function toSnakeCase(value: string) {
-  return value.replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`)
-}
-
-function isWidgetItem(item: string): item is WidgetName {
-  return widgetNames.includes(item as WidgetName)
-}
-
-function getSectionLabel(section: SectionId, language: LanguageCode) {
-  return t(language, `section_${toSnakeCase(section)}`)
-}
-
-function getItemLabel(section: SectionId, item: string, language: LanguageCode) {
-  if (section === 'widgets') {
-    return item
+function getStorageValue(key: string) {
+  if (typeof window === 'undefined') {
+    return null
   }
 
-  return t(language, `item_${toSnakeCase(section)}_${toSnakeCase(item)}`)
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function setStorageValue(key: string, value: string) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    // ignore storage write errors
+  }
+}
+
+function parseTheme(value: string | null): 'light' | 'dark' {
+  return value === 'dark' ? 'dark' : DEFAULT_THEME
+}
+
+function parseLanguage(value: string | null): LanguageCode {
+  return value === 'de-DE' ? 'de-DE' : DEFAULT_LANGUAGE
+}
+
+function normalizeAccentColor(value: string | null | undefined) {
+  if (!value) {
+    return DEFAULT_ACCENT_COLOR
+  }
+
+  const trimmed = value.trim()
+  return HEX_COLOR_PATTERN.test(trimmed) ? trimmed.toLowerCase() : DEFAULT_ACCENT_COLOR
 }
 
 function GithubIcon() {
@@ -88,6 +97,17 @@ function SunIcon() {
   )
 }
 
+function BrushIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M20.71 4.04a2.5 2.5 0 0 0-3.54 0L9 12.22l-1.43 4.24 4.24-1.43 8.19-8.19a2.5 2.5 0 0 0 0-3.54Zm-10.06 9.7 6.88-6.88 1.46 1.46-6.88 6.88-1.94.65.48-2.11ZM6.25 16.5a3.75 3.75 0 0 1 2.77 6.28A3.74 3.74 0 0 1 2.75 20a1 1 0 1 1 2 0 1.75 1.75 0 1 0 1.5-1.73 1 1 0 0 1 0-1.77Z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
 function UsFlagIcon() {
   return (
     <svg viewBox="0 0 28 20" aria-hidden="true">
@@ -117,55 +137,160 @@ function ChevronDownIcon() {
 }
 
 function App() {
-  const [activeEntry, setActiveEntry] = useState<ActiveEntry>({
-    section: 'gettingStarted',
-    item: 'overview',
-  })
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
-  const [language, setLanguage] = useState<LanguageCode>('en-US')
+  const [selectedVersion, setSelectedVersion] = useState(DEFAULT_VERSION)
+  const [availableVersions, setAvailableVersions] = useState<string[]>([DEFAULT_VERSION])
+  const [activeEntry, setActiveEntry] = useState<ActiveEntry | null>(() => getDefaultEntry(initialDocs))
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => parseTheme(getStorageValue(STORAGE_THEME_KEY)))
+  const [language, setLanguage] = useState<LanguageCode>(() => parseLanguage(getStorageValue(STORAGE_LANGUAGE_KEY)))
+  const [accentColor, setAccentColor] = useState<string>(() => normalizeAccentColor(getStorageValue(STORAGE_ACCENT_KEY)))
+  const [isAccentOpen, setIsAccentOpen] = useState(false)
   const [isLanguageOpen, setIsLanguageOpen] = useState(false)
-  const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
-    gettingStarted: true,
-    widgets: false,
-    features: false,
-    cssRules: false,
-    htmlRules: false,
-    howToGuides: false,
-  })
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => createInitialExpanded(initialDocs))
+  const [remoteDocs, setRemoteDocs] = useState<RemoteDocsBundle | null>(null)
+  const [isDocsLoading, setIsDocsLoading] = useState(true)
 
-  const activeSectionLabel = getSectionLabel(activeEntry.section, language)
-  const activeItemLabel = getItemLabel(activeEntry.section, activeEntry.item, language)
+  const docsLocale: DocsLocale = language === 'de-DE' ? 'de_DE' : 'en_US'
+  const preferMainRef = selectedVersion === (availableVersions[0] ?? latestVersion)
+  const localDocsNavigation = useMemo(() => listDocs(selectedVersion, docsLocale), [docsLocale, selectedVersion])
+  const docsNavigation = remoteDocs?.sections ?? localDocsNavigation
 
-  const isWidget = useMemo(
-    () => activeEntry.section === 'widgets' && isWidgetItem(activeEntry.item),
-    [activeEntry.item, activeEntry.section],
-  )
-  const activeWidgetName: WidgetName | null =
-    activeEntry.section === 'widgets' && isWidgetItem(activeEntry.item) ? activeEntry.item : null
-  const ActiveWidget = activeWidgetName ? widgetComponents[activeWidgetName] : null
+  useEffect(() => {
+    setExpandedSections((prev) => {
+      const next = { ...prev }
 
-  const description = isWidget
-    ? t(language, 'widget_description', { item: activeItemLabel })
-    : t(language, 'non_widget_description', { section: activeSectionLabel, item: activeItemLabel })
+      for (const key of Object.keys(next)) {
+        if (!docsNavigation.some((section) => section.category === key)) {
+          delete next[key]
+        }
+      }
 
-  const breadcrumb = `${activeSectionLabel} / ${activeItemLabel}`
+      for (const section of docsNavigation) {
+        if (next[section.category] === undefined) {
+          next[section.category] = section.category === 'Getting Started'
+        }
+      }
+
+      return next
+    })
+
+    if (!activeEntry) {
+      setActiveEntry(getDefaultEntry(docsNavigation))
+      return
+    }
+
+    const exists = docsNavigation.some(
+      (section) => section.category === activeEntry.category && section.entries.includes(activeEntry.entry),
+    )
+
+    if (!exists) {
+      setActiveEntry(getDefaultEntry(docsNavigation))
+    }
+  }, [activeEntry, docsNavigation])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
+    setStorageValue(STORAGE_THEME_KEY, theme)
   }, [theme])
 
-  const toggleSection = (section: SectionId) => {
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand-main', accentColor)
+    setStorageValue(STORAGE_ACCENT_KEY, accentColor)
+  }, [accentColor])
+
+  useEffect(() => {
+    setStorageValue(STORAGE_LANGUAGE_KEY, language)
+  }, [language])
+
+  useEffect(() => {
+    if (!isAccentOpen) {
+      return
+    }
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsAccentOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', onEscape)
+    return () => {
+      window.removeEventListener('keydown', onEscape)
+    }
+  }, [isAccentOpen])
+
+  useEffect(() => {
+    let ignore = false
+
+    fetchAvailableVersions().then((versions) => {
+      if (ignore || versions.length === 0) {
+        return
+      }
+
+      setAvailableVersions(versions)
+      setSelectedVersion((current) => (current === DEFAULT_VERSION ? versions[0] : current))
+    })
+
+    return () => {
+      ignore = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let ignore = false
+    setIsDocsLoading(true)
+    setRemoteDocs(null)
+
+    fetchRemoteDocsBundle(selectedVersion, docsLocale, { preferMainRef })
+      .then((bundle) => {
+        if (ignore) {
+          return
+        }
+        console.info('[remote-docs] app received bundle', {
+          version: selectedVersion,
+          locale: docsLocale,
+          sections: bundle?.sections.length ?? 0,
+          entries: bundle ? Object.keys(bundle.docsByKey).length : 0,
+        })
+        setRemoteDocs(bundle)
+        setIsDocsLoading(false)
+      })
+      .catch(() => {
+        if (ignore) {
+          return
+        }
+        console.info('[remote-docs] app failed to load remote bundle; using local fallback', {
+          version: selectedVersion,
+          locale: docsLocale,
+        })
+        setRemoteDocs(null)
+        setIsDocsLoading(false)
+      })
+
+    return () => {
+      ignore = true
+    }
+  }, [docsLocale, preferMainRef, selectedVersion])
+
+  const activeDocKey = activeEntry ? `${activeEntry.category}/${activeEntry.entry}` : null
+  const remoteMarkdownSource = activeDocKey ? remoteDocs?.docsByKey[activeDocKey] : null
+  const localMarkdownSource = activeEntry
+    ? getDocMarkdown(selectedVersion, activeEntry.category, activeEntry.entry, docsLocale)
+    : null
+  const markdownSource = remoteMarkdownSource ?? localMarkdownSource
+  const runtimeBaseUrl =
+    typeof window === 'undefined'
+      ? ''
+      : new URL(import.meta.env.BASE_URL, window.location.origin).toString().replace(/\/$/, '')
+  const parsedDoc = useMemo(
+    () => (markdownSource ? parseMarkdownDoc(markdownSource, runtimeBaseUrl) : null),
+    [markdownSource, runtimeBaseUrl],
+  )
+  const breadcrumb = activeEntry ? `${activeEntry.category} / ${getEntryLabel(activeEntry.entry)}` : ''
+
+  const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
-    }))
-  }
-
-  const selectEntry = (section: SectionId, item: string) => {
-    setActiveEntry({ section, item })
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: true,
     }))
   }
 
@@ -178,8 +303,19 @@ function App() {
     setIsLanguageOpen(false)
   }
 
+  const toggleAccentPicker = () => {
+    setIsAccentOpen((prev) => !prev)
+  }
+
+  const onAccentColorChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setAccentColor(normalizeAccentColor(event.target.value))
+  }
+
   const ThemeToggleIcon = theme === 'light' ? MoonIcon : SunIcon
   const themeToggleLabel = theme === 'light' ? t(language, 'theme_to_dark') : t(language, 'theme_to_light')
+  const accentColorButtonAria = t(language, 'accent_color_button_aria')
+  const accentColorPickerAria = t(language, 'accent_color_picker_aria')
+  const accentColorDialogAria = t(language, 'accent_color_dialog_aria')
   const isGerman = language === 'de-DE'
   const LanguageFlagIcon = isGerman ? GermanyFlagIcon : UsFlagIcon
 
@@ -188,11 +324,17 @@ function App() {
       <header className="top-header">
         <div className="header-left">
           <span className="header-brand">Bevy Extended Ui</span>
-          <select className="version-select" defaultValue="1.4.2" aria-label="Version">
-            <option value="1.4.2">1.4.2 (Latest)</option>
-            <option value="1.4.0">1.4.0</option>
-            <option value="1.3.0">1.3.0</option>
-            <option value="1.2.0">1.2.0</option>
+          <select
+            className="version-select"
+            value={selectedVersion}
+            aria-label="Version"
+            onChange={(event) => setSelectedVersion(event.target.value)}
+          >
+            {availableVersions.map((version, index) => (
+              <option key={version} value={version}>
+                {index === 0 ? `${version} (Latest)` : version}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -241,6 +383,16 @@ function App() {
           >
             <GithubIcon />
           </a>
+          <button
+            type="button"
+            className="icon-button accent-color-button"
+            aria-label={accentColorButtonAria}
+            aria-expanded={isAccentOpen}
+            onClick={toggleAccentPicker}
+          >
+            <BrushIcon />
+            <span className="accent-color-dot" style={{ backgroundColor: accentColor }} aria-hidden="true" />
+          </button>
           <button type="button" className="icon-button" aria-label={themeToggleLabel} onClick={toggleTheme}>
             <ThemeToggleIcon />
           </button>
@@ -256,32 +408,35 @@ function App() {
 
           <nav aria-label="Documentation navigation">
             <ul className="nav-list">
-              {navSections.map((section) => (
-                <li key={section.id} className="nav-group">
+              {docsNavigation.map((section) => (
+                <li key={section.category} className="nav-group">
                   <button
                     type="button"
                     className="group-title group-toggle"
-                    aria-expanded={expandedSections[section.id]}
-                    onClick={() => toggleSection(section.id)}
+                    aria-expanded={Boolean(expandedSections[section.category])}
+                    onClick={() => toggleSection(section.category)}
                   >
-                    <span>{getSectionLabel(section.id, language)}</span>
-                    <span className={`group-chevron ${expandedSections[section.id] ? 'expanded' : ''}`} aria-hidden="true">
+                    <span>{section.category}</span>
+                    <span
+                      className={`group-chevron ${expandedSections[section.category] ? 'expanded' : ''}`}
+                      aria-hidden="true"
+                    >
                       <ChevronDownIcon />
                     </span>
                   </button>
 
-                  {expandedSections[section.id] ? (
-                    <ul className="widget-list">
-                      {section.items.map((item) => {
-                        const isActive = activeEntry.section === section.id && activeEntry.item === item
+                  {expandedSections[section.category] ? (
+                    <ul className="entry-list">
+                      {section.entries.map((entry) => {
+                        const isActive = activeEntry?.category === section.category && activeEntry.entry === entry
                         return (
-                          <li key={item}>
+                          <li key={entry}>
                             <button
                               type="button"
-                              className={`widget-link ${isActive ? 'active' : ''}`}
-                              onClick={() => selectEntry(section.id, item)}
+                              className={`entry-link ${isActive ? 'active' : ''}`}
+                              onClick={() => setActiveEntry({ category: section.category, entry })}
                             >
-                              {getItemLabel(section.id, item, language)}
+                              {getEntryLabel(entry)}
                             </button>
                           </li>
                         )
@@ -295,33 +450,48 @@ function App() {
         </aside>
 
         <main className="docs-content">
-          <header className="docs-header">
-            <p className="breadcrumb">{breadcrumb}</p>
-            <h1>{activeItemLabel}</h1>
-            <p>{description}</p>
-          </header>
-
-          <section className="docs-section">
-            <h3>{t(language, 'overview_title')}</h3>
-            <p>{t(language, 'overview_text')}</p>
-          </section>
-
-          <section className="docs-section">
-            <h3>{t(language, 'usage_title')}</h3>
-            {ActiveWidget ? (
-              <ActiveWidget />
+          <div className="docs-content-inner">
+            {parsedDoc && activeEntry ? (
+              <>
+                <p className="breadcrumb">{breadcrumb}</p>
+                <MarkdownPage doc={parsedDoc} theme={theme} />
+              </>
             ) : (
-              <article className="widget-doc">
-                <h3>{activeItemLabel}</h3>
-                <p>{t(language, 'non_widget_intro')}</p>
-                <div className="widget-demo">
-                  <p>{t(language, 'non_widget_hint', { section: activeSectionLabel })}</p>
-                </div>
-              </article>
+              <section className="docs-section">
+                <h3>{language === 'de-DE' ? 'Keine Dokumentation gefunden' : 'No documentation found'}</h3>
+                <p>
+                  {language === 'de-DE'
+                    ? 'Lege Markdown-Dateien unter /docs/<Kategorie>/<de_DE|en_US>/<Eintrag>.md an.'
+                    : 'Add Markdown files under /docs/<Category>/<de_DE|en_US>/<Entry>.md.'}
+                </p>
+              </section>
             )}
-          </section>
+          </div>
         </main>
       </div>
+
+      {isDocsLoading ? (
+        <div className="docs-loading-overlay" role="status" aria-live="polite" aria-label="Docs loading">
+          <div className="docs-loading-card">
+            <span className="docs-loading-spinner" aria-hidden="true" />
+            <p>{language === 'de-DE' ? 'Bitte Warten!' : 'Please Wait!'}</p>
+          </div>
+        </div>
+      ) : null}
+
+      {isAccentOpen ? (
+        <div className="accent-modal-overlay" onClick={(event) => event.target === event.currentTarget && setIsAccentOpen(false)}>
+          <div className="accent-modal-card" role="dialog" aria-modal="true" aria-label={accentColorDialogAria}>
+            <input
+              className="accent-color-input"
+              type="color"
+              value={accentColor}
+              aria-label={accentColorPickerAria}
+              onChange={onAccentColorChange}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

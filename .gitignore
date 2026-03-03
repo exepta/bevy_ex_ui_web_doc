@@ -27,3 +27,7 @@ coverage
 # Playwright output
 playwright/reports/
 playwright/browsers/
+
+# Rust/WASM outputs
+wasm/target/
+public/examples/

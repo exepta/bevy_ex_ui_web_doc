@@ -1,0 +1,7 @@
+[build]
+target = "index.html"
+dist = "../../../public/examples/button"
+public_url = "/examples/button/"
+
+[watch]
+ignore = ["../../../public/examples/button"]

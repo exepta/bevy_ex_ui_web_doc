@@ -1,0 +1,11 @@
+[workspace]
+members = ["examples/button"]
+resolver = "2"
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = "s"
+codegen-units = 1
+lto = "thin"
