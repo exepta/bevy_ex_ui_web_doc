@@ -18,6 +18,7 @@
     "test:e2e:install": "PLAYWRIGHT_BROWSERS_PATH=playwright/browsers playwright install chromium"
   },
   "dependencies": {
+    "@fluent/bundle": "^0.19.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
