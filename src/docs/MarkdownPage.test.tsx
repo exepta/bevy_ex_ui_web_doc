@@ -58,4 +58,19 @@ describe('MarkdownPage', () => {
     expect(iframe).not.toBeNull()
     expect(iframe?.getAttribute('src')).toContain('theme=dark')
   })
+
+  it('highlights fenced code blocks with language classes', () => {
+    const { container } = render(
+      <MarkdownPage
+        doc={{
+          body: '```rust\nfn main() {\n  let x = 1;\n}\n```',
+        }}
+        theme="light"
+      />,
+    )
+
+    expect(container.querySelector('pre')).not.toBeNull()
+    expect(container.querySelector('pre span')).not.toBeNull()
+    expect(container.textContent).toContain('fn main()')
+  })
 })
