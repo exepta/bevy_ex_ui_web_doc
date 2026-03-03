@@ -1,59 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import { listDocs, getDocMarkdown, latestVersion } from './docs/catalog'
+import MarkdownPage from './docs/MarkdownPage'
+import { parseMarkdownDoc } from './docs/markdown'
+import { fetchAvailableVersions } from './docs/githubVersions'
 import { t, type LanguageCode } from './i18n'
-import { widgetComponents, widgetNames, type WidgetName } from './widgets'
+import { createInitialExpanded, getDefaultEntry, type ActiveEntry } from './appState'
 
-const gettingStartedItems = ['overview', 'installation', 'usage', 'exampleProjects', 'faqs'] as const
-const featureItems = [
-  'default',
-  'cssBreakpoints',
-  'wasmBreakpoints',
-  'wasmDefault',
-  'fluent',
-  'propertiesLang',
-  'clipboardWasm',
-] as const
-const cssRuleItems = ['basic', 'mediaQueries', 'keyframes', 'functions'] as const
-const htmlRuleItems = ['structure', 'attributes', 'meta'] as const
-const howToGuideItems = ['site1'] as const
-
-type SectionId = 'gettingStarted' | 'widgets' | 'features' | 'cssRules' | 'htmlRules' | 'howToGuides'
-
-type ActiveEntry = {
-  section: SectionId
-  item: string
-}
-
-type ExpandedSections = Record<SectionId, boolean>
-
-const navSections: Array<{ id: SectionId; items: readonly string[] }> = [
-  { id: 'gettingStarted', items: gettingStartedItems },
-  { id: 'widgets', items: widgetNames },
-  { id: 'features', items: featureItems },
-  { id: 'cssRules', items: cssRuleItems },
-  { id: 'htmlRules', items: htmlRuleItems },
-  { id: 'howToGuides', items: howToGuideItems },
-]
-
-function toSnakeCase(value: string) {
-  return value.replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`)
-}
-
-function isWidgetItem(item: string): item is WidgetName {
-  return widgetNames.includes(item as WidgetName)
-}
-
-function getSectionLabel(section: SectionId, language: LanguageCode) {
-  return t(language, `section_${toSnakeCase(section)}`)
-}
-
-function getItemLabel(section: SectionId, item: string, language: LanguageCode) {
-  if (section === 'widgets') {
-    return item
-  }
-
-  return t(language, `item_${toSnakeCase(section)}_${toSnakeCase(item)}`)
-}
+const DEFAULT_VERSION = latestVersion
+const initialDocs = listDocs(DEFAULT_VERSION)
 
 function GithubIcon() {
   return (
@@ -117,55 +72,77 @@ function ChevronDownIcon() {
 }
 
 function App() {
-  const [activeEntry, setActiveEntry] = useState<ActiveEntry>({
-    section: 'gettingStarted',
-    item: 'overview',
-  })
+  const [selectedVersion, setSelectedVersion] = useState(DEFAULT_VERSION)
+  const [availableVersions, setAvailableVersions] = useState<string[]>([DEFAULT_VERSION])
+  const [activeEntry, setActiveEntry] = useState<ActiveEntry | null>(() => getDefaultEntry(initialDocs))
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [language, setLanguage] = useState<LanguageCode>('en-US')
   const [isLanguageOpen, setIsLanguageOpen] = useState(false)
-  const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
-    gettingStarted: true,
-    widgets: false,
-    features: false,
-    cssRules: false,
-    htmlRules: false,
-    howToGuides: false,
-  })
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => createInitialExpanded(initialDocs))
 
-  const activeSectionLabel = getSectionLabel(activeEntry.section, language)
-  const activeItemLabel = getItemLabel(activeEntry.section, activeEntry.item, language)
+  const docsNavigation = useMemo(() => listDocs(selectedVersion), [selectedVersion])
 
-  const isWidget = useMemo(
-    () => activeEntry.section === 'widgets' && isWidgetItem(activeEntry.item),
-    [activeEntry.item, activeEntry.section],
-  )
-  const activeWidgetName: WidgetName | null =
-    activeEntry.section === 'widgets' && isWidgetItem(activeEntry.item) ? activeEntry.item : null
-  const ActiveWidget = activeWidgetName ? widgetComponents[activeWidgetName] : null
+  useEffect(() => {
+    setExpandedSections((prev) => {
+      const next = { ...prev }
 
-  const description = isWidget
-    ? t(language, 'widget_description', { item: activeItemLabel })
-    : t(language, 'non_widget_description', { section: activeSectionLabel, item: activeItemLabel })
+      for (const key of Object.keys(next)) {
+        if (!docsNavigation.some((section) => section.category === key)) {
+          delete next[key]
+        }
+      }
 
-  const breadcrumb = `${activeSectionLabel} / ${activeItemLabel}`
+      for (const section of docsNavigation) {
+        if (next[section.category] === undefined) {
+          next[section.category] = section.category === 'Getting Started'
+        }
+      }
+
+      return next
+    })
+
+    if (!activeEntry) {
+      setActiveEntry(getDefaultEntry(docsNavigation))
+      return
+    }
+
+    const exists = docsNavigation.some(
+      (section) => section.category === activeEntry.category && section.entries.includes(activeEntry.entry),
+    )
+
+    if (!exists) {
+      setActiveEntry(getDefaultEntry(docsNavigation))
+    }
+  }, [activeEntry, docsNavigation])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
 
-  const toggleSection = (section: SectionId) => {
+  useEffect(() => {
+    let ignore = false
+
+    fetchAvailableVersions().then((versions) => {
+      if (ignore || versions.length === 0) {
+        return
+      }
+
+      setAvailableVersions(versions)
+    })
+
+    return () => {
+      ignore = true
+    }
+  }, [])
+
+  const markdownSource = activeEntry ? getDocMarkdown(selectedVersion, activeEntry.category, activeEntry.entry) : null
+  const parsedDoc = useMemo(() => (markdownSource ? parseMarkdownDoc(markdownSource) : null), [markdownSource])
+  const breadcrumb = activeEntry ? `${activeEntry.category} / ${activeEntry.entry}` : ''
+
+  const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
-    }))
-  }
-
-  const selectEntry = (section: SectionId, item: string) => {
-    setActiveEntry({ section, item })
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: true,
     }))
   }
 
@@ -188,11 +165,17 @@ function App() {
       <header className="top-header">
         <div className="header-left">
           <span className="header-brand">Bevy Extended Ui</span>
-          <select className="version-select" defaultValue="1.4.2" aria-label="Version">
-            <option value="1.4.2">1.4.2 (Latest)</option>
-            <option value="1.4.0">1.4.0</option>
-            <option value="1.3.0">1.3.0</option>
-            <option value="1.2.0">1.2.0</option>
+          <select
+            className="version-select"
+            value={selectedVersion}
+            aria-label="Version"
+            onChange={(event) => setSelectedVersion(event.target.value)}
+          >
+            {availableVersions.map((version) => (
+              <option key={version} value={version}>
+                {version === latestVersion ? `${version} (Latest)` : version}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -256,32 +239,35 @@ function App() {
 
           <nav aria-label="Documentation navigation">
             <ul className="nav-list">
-              {navSections.map((section) => (
-                <li key={section.id} className="nav-group">
+              {docsNavigation.map((section) => (
+                <li key={section.category} className="nav-group">
                   <button
                     type="button"
                     className="group-title group-toggle"
-                    aria-expanded={expandedSections[section.id]}
-                    onClick={() => toggleSection(section.id)}
+                    aria-expanded={Boolean(expandedSections[section.category])}
+                    onClick={() => toggleSection(section.category)}
                   >
-                    <span>{getSectionLabel(section.id, language)}</span>
-                    <span className={`group-chevron ${expandedSections[section.id] ? 'expanded' : ''}`} aria-hidden="true">
+                    <span>{section.category}</span>
+                    <span
+                      className={`group-chevron ${expandedSections[section.category] ? 'expanded' : ''}`}
+                      aria-hidden="true"
+                    >
                       <ChevronDownIcon />
                     </span>
                   </button>
 
-                  {expandedSections[section.id] ? (
-                    <ul className="widget-list">
-                      {section.items.map((item) => {
-                        const isActive = activeEntry.section === section.id && activeEntry.item === item
+                  {expandedSections[section.category] ? (
+                    <ul className="entry-list">
+                      {section.entries.map((entry) => {
+                        const isActive = activeEntry?.category === section.category && activeEntry.entry === entry
                         return (
-                          <li key={item}>
+                          <li key={entry}>
                             <button
                               type="button"
-                              className={`widget-link ${isActive ? 'active' : ''}`}
-                              onClick={() => selectEntry(section.id, item)}
+                              className={`entry-link ${isActive ? 'active' : ''}`}
+                              onClick={() => setActiveEntry({ category: section.category, entry })}
                             >
-                              {getItemLabel(section.id, item, language)}
+                              {entry}
                             </button>
                           </li>
                         )
@@ -295,31 +281,23 @@ function App() {
         </aside>
 
         <main className="docs-content">
-          <header className="docs-header">
-            <p className="breadcrumb">{breadcrumb}</p>
-            <h1>{activeItemLabel}</h1>
-            <p>{description}</p>
-          </header>
-
-          <section className="docs-section">
-            <h3>{t(language, 'overview_title')}</h3>
-            <p>{t(language, 'overview_text')}</p>
-          </section>
-
-          <section className="docs-section">
-            <h3>{t(language, 'usage_title')}</h3>
-            {ActiveWidget ? (
-              <ActiveWidget />
+          <div className="docs-content-inner">
+            {parsedDoc && activeEntry ? (
+              <>
+                <p className="breadcrumb">{breadcrumb}</p>
+                <MarkdownPage doc={parsedDoc} />
+              </>
             ) : (
-              <article className="widget-doc">
-                <h3>{activeItemLabel}</h3>
-                <p>{t(language, 'non_widget_intro')}</p>
-                <div className="widget-demo">
-                  <p>{t(language, 'non_widget_hint', { section: activeSectionLabel })}</p>
-                </div>
-              </article>
+              <section className="docs-section">
+                <h3>{language === 'de-DE' ? 'Keine Dokumentation gefunden' : 'No documentation found'}</h3>
+                <p>
+                  {language === 'de-DE'
+                    ? 'Lege Markdown-Dateien unter /docs/<Kategorie>/<Eintrag>.md an.'
+                    : 'Add Markdown files under /docs/<Category>/<Entry>.md.'}
+                </p>
+              </section>
             )}
-          </section>
+          </div>
         </main>
       </div>
     </div>
