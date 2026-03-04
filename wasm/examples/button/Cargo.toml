@@ -18,6 +18,7 @@ bevy = { version = "0.18", default-features = false, features = [
   "default_font"
 ] }
 bevy_extended_ui = { version = "1.4.2", default-features = false, features = ["wasm-default"] }
+bevy_extended_ui_macros = { version = "1.4.2" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }

@@ -1,0 +1,7 @@
+[build]
+target = "index.html"
+dist = "../../../public/examples/radiobutton"
+public_url = "/examples/radiobutton/"
+
+[watch]
+ignore = ["../../../public/examples/radiobutton"]

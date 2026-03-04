@@ -3,7 +3,7 @@
 ## Struktur
 - `src/` React/Vite Doku-Webseite
 - `wasm/` Rust-Workspace fuer Bevy-WASM Beispiele
-- `wasm/examples/button/` erstes Beispiel (`/examples/button`)
+- `wasm/examples/<widget>/` ein Beispiel pro Widget (`/examples/<widget>/`)
 
 ## Bevy WASM Setup
 Voraussetzungen:
@@ -17,17 +17,22 @@ rustup target add wasm32-unknown-unknown
 cargo install trunk --locked
 ```
 
-Button-Beispiel bauen:
+Alle Widget-Beispiele bauen:
 ```bash
-pnpm wasm:build:button
+pnpm wasm:example:build
+```
+
+Ein einzelnes Beispiel bauen:
+```bash
+pnpm wasm:example:build:button
 ```
 
 Output landet in:
-- `public/examples/button/`
+- `public/examples/<widget>/`
 
-Danach ist das Beispiel unter erreichbar:
-- `http://localhost:5173/examples/button/` (bei `pnpm dev`)
-- `https://<base.url>/examples/button/` (deployt)
+Danach sind die Beispiele erreichbar unter:
+- `http://localhost:5173/examples/<widget>/` (bei `pnpm dev`)
+- `https://<base.url>/examples/<widget>/` (deployt)
 
 ## Website lokal
 ```bash
@@ -38,7 +43,7 @@ pnpm dev
 ## Docker + Nginx
 Build:
 ```bash
-pnpm wasm:build:button
+pnpm wasm:example:build
 pnpm docker:build
 ```
 
@@ -49,7 +54,7 @@ pnpm docker:run
 
 Dann:
 - Website: `http://localhost:8080/`
-- WASM Beispiel: `http://localhost:8080/examples/button/`
+- WASM Beispiele: `http://localhost:8080/examples/<widget>/`
 
 ## Hinweis
-Der Docker-Build baut aktuell die React-Webseite. Die WASM-Beispiele sollten vorher mit `pnpm wasm:build:*` erzeugt werden, damit sie unter `public/examples/` im Image enthalten sind.
+Der Docker-Build baut aktuell die React-Webseite. Die WASM-Beispiele sollten vorher mit `pnpm wasm:example:build` erzeugt werden, damit sie unter `public/examples/` im Image enthalten sind.

@@ -1,0 +1,7 @@
+[build]
+target = "index.html"
+dist = "../../../public/examples/inputfield"
+public_url = "/examples/inputfield/"
+
+[watch]
+ignore = ["../../../public/examples/inputfield"]

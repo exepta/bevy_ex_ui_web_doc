@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="toggle-example">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="base.css">
+</head>
+<body>
+<div class="display-center">
+  <h3 id="toggle-state">Active: color</h3>
+</div>
+<fieldset id="set-toggle" mode="multi" allow-none="true" onchange="toggle_change" class="row">
+  <toggle value="size">Size</toggle>
+  <toggle value="bold">Bold</toggle>
+  <toggle value="color" selected>
+    <icon src="examples/icons/check-mark.png"></icon>
+    Color
+  </toggle>
+</fieldset>
+</body>
+</html>

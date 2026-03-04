@@ -1,0 +1,7 @@
+[build]
+target = "index.html"
+dist = "../../../public/examples/progressbar"
+public_url = "/examples/progressbar/"
+
+[watch]
+ignore = ["../../../public/examples/progressbar"]
