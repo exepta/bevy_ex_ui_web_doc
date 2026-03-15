@@ -3,6 +3,9 @@ FROM node:22-alpine AS web-builder
 WORKDIR /app
 RUN corepack enable
 
+ARG DOCS_BASE_PATH=/
+ENV DOCS_BASE_PATH=${DOCS_BASE_PATH}
+
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
