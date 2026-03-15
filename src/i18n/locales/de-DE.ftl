@@ -10,6 +10,7 @@ theme_to_light = Zum Hellmodus wechseln
 accent_color_button_aria = Akzentfarbe
 accent_color_picker_aria = Akzentfarbenwähler
 accent_color_dialog_aria = Akzentfarben-Dialog
+no_version_option = Keine Version
 
 section_getting_started = Erste Schritte
 section_widgets = Widgets

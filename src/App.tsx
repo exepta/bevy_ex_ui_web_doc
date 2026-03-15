@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { listDocs, getDocMarkdown, latestVersion, type DocsLocale } from './docs/catalog'
 import MarkdownPage from './docs/MarkdownPage'
@@ -18,6 +18,89 @@ const DEFAULT_THEME: 'light' | 'dark' = 'light'
 const DEFAULT_LANGUAGE: LanguageCode = 'en-US'
 const DEFAULT_ACCENT_COLOR = '#195cc7'
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/
+const NO_VERSION_VALUE = '__no_version__'
+const ACCENT_COLOR_PRESET = [
+  '#195cc7',
+  '#ff5533',
+  '#ef476f',
+  '#f78c6b',
+  '#f4a261',
+  '#ffbe0b',
+  '#8ab17d',
+  '#06d6a0',
+  '#2a9d8f',
+  '#00a896',
+  '#118ab2',
+  '#3a86ff',
+  '#577590',
+  '#8338ec',
+  '#9b5de5',
+  '#f15bb5',
+  '#ff006e',
+  '#fb5607',
+  '#43aa8b',
+  '#457b9d',
+]
+
+function toHexChannel(value: number) {
+  return value.toString(16).padStart(2, '0')
+}
+
+function hslToHex(hue: number, saturation: number, lightness: number) {
+  const s = saturation / 100
+  const l = lightness / 100
+  const c = (1 - Math.abs(2 * l - 1)) * s
+  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1))
+  const m = l - c / 2
+
+  let red = 0
+  let green = 0
+  let blue = 0
+
+  if (hue < 60) {
+    red = c
+    green = x
+  } else if (hue < 120) {
+    red = x
+    green = c
+  } else if (hue < 180) {
+    green = c
+    blue = x
+  } else if (hue < 240) {
+    green = x
+    blue = c
+  } else if (hue < 300) {
+    red = x
+    blue = c
+  } else {
+    red = c
+    blue = x
+  }
+
+  const r = Math.round((red + m) * 255)
+  const g = Math.round((green + m) * 255)
+  const b = Math.round((blue + m) * 255)
+
+  return `#${toHexChannel(r)}${toHexChannel(g)}${toHexChannel(b)}`
+}
+
+function buildGeneratedAccentPalette() {
+  const colors: string[] = []
+
+  for (let row = 0; row < 10; row += 1) {
+    for (let column = 0; column < 10; column += 1) {
+      const hue = (column * 36 + row * 11) % 360
+      const saturation = Math.min(88, 64 + (column % 4) * 5)
+      const lightness = Math.min(68, 38 + row * 3)
+      colors.push(hslToHex(hue, saturation, lightness))
+    }
+  }
+
+  return colors
+}
+
+const ACCENT_COLOR_OPTIONS = [...new Set([...ACCENT_COLOR_PRESET, ...buildGeneratedAccentPalette()])].slice(0, 100)
+const ACCENT_COLOR_SET = new Set(ACCENT_COLOR_OPTIONS.map((color) => color.toLowerCase()))
 
 function getEntryLabel(entry: string) {
   return entry.replace(/^\d+_/, '')
@@ -60,8 +143,12 @@ function normalizeAccentColor(value: string | null | undefined) {
     return DEFAULT_ACCENT_COLOR
   }
 
-  const trimmed = value.trim()
-  return HEX_COLOR_PATTERN.test(trimmed) ? trimmed.toLowerCase() : DEFAULT_ACCENT_COLOR
+  const trimmed = value.trim().toLowerCase()
+  if (!HEX_COLOR_PATTERN.test(trimmed)) {
+    return DEFAULT_ACCENT_COLOR
+  }
+
+  return ACCENT_COLOR_SET.has(trimmed) ? trimmed : DEFAULT_ACCENT_COLOR
 }
 
 function GithubIcon() {
@@ -139,6 +226,7 @@ function ChevronDownIcon() {
 function App() {
   const [selectedVersion, setSelectedVersion] = useState(DEFAULT_VERSION)
   const [availableVersions, setAvailableVersions] = useState<string[]>([DEFAULT_VERSION])
+  const [includeBetaVersions, setIncludeBetaVersions] = useState(false)
   const [activeEntry, setActiveEntry] = useState<ActiveEntry | null>(() => getDefaultEntry(initialDocs))
   const [theme, setTheme] = useState<'light' | 'dark'>(() => parseTheme(getStorageValue(STORAGE_THEME_KEY)))
   const [language, setLanguage] = useState<LanguageCode>(() => parseLanguage(getStorageValue(STORAGE_LANGUAGE_KEY)))
@@ -150,9 +238,9 @@ function App() {
   const [isDocsLoading, setIsDocsLoading] = useState(true)
 
   const docsLocale: DocsLocale = language === 'de-DE' ? 'de_DE' : 'en_US'
-  const preferMainRef = selectedVersion === (availableVersions[0] ?? latestVersion)
+  const effectiveRemoteDocs = selectedVersion === NO_VERSION_VALUE ? null : remoteDocs
   const localDocsNavigation = useMemo(() => listDocs(selectedVersion, docsLocale), [docsLocale, selectedVersion])
-  const docsNavigation = remoteDocs?.sections ?? localDocsNavigation
+  const docsNavigation = effectiveRemoteDocs?.sections ?? localDocsNavigation
 
   useEffect(() => {
     setExpandedSections((prev) => {
@@ -221,26 +309,35 @@ function App() {
   useEffect(() => {
     let ignore = false
 
-    fetchAvailableVersions().then((versions) => {
-      if (ignore || versions.length === 0) {
+    fetchAvailableVersions({ includeBeta: includeBetaVersions }).then((versions) => {
+      if (ignore) {
         return
       }
 
       setAvailableVersions(versions)
-      setSelectedVersion((current) => (current === DEFAULT_VERSION ? versions[0] : current))
+      if (versions.length === 0) {
+        setSelectedVersion(NO_VERSION_VALUE)
+        return
+      }
+
+      setSelectedVersion((current) => (versions.includes(current) ? current : versions[0]))
     })
 
     return () => {
       ignore = true
     }
-  }, [])
+  }, [includeBetaVersions])
 
   useEffect(() => {
+    if (selectedVersion === NO_VERSION_VALUE) {
+      return
+    }
+
     let ignore = false
     setIsDocsLoading(true)
     setRemoteDocs(null)
 
-    fetchRemoteDocsBundle(selectedVersion, docsLocale, { preferMainRef })
+    fetchRemoteDocsBundle(selectedVersion, docsLocale)
       .then((bundle) => {
         if (ignore) {
           return
@@ -269,10 +366,10 @@ function App() {
     return () => {
       ignore = true
     }
-  }, [docsLocale, preferMainRef, selectedVersion])
+  }, [docsLocale, selectedVersion])
 
   const activeDocKey = activeEntry ? `${activeEntry.category}/${activeEntry.entry}` : null
-  const remoteMarkdownSource = activeDocKey ? remoteDocs?.docsByKey[activeDocKey] : null
+  const remoteMarkdownSource = activeDocKey ? effectiveRemoteDocs?.docsByKey[activeDocKey] : null
   const localMarkdownSource = activeEntry
     ? getDocMarkdown(selectedVersion, activeEntry.category, activeEntry.entry, docsLocale)
     : null
@@ -307,8 +404,9 @@ function App() {
     setIsAccentOpen((prev) => !prev)
   }
 
-  const onAccentColorChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setAccentColor(normalizeAccentColor(event.target.value))
+  const selectAccentColor = (value: string) => {
+    setAccentColor(value)
+    setIsAccentOpen(false)
   }
 
   const ThemeToggleIcon = theme === 'light' ? MoonIcon : SunIcon
@@ -316,6 +414,7 @@ function App() {
   const accentColorButtonAria = t(language, 'accent_color_button_aria')
   const accentColorPickerAria = t(language, 'accent_color_picker_aria')
   const accentColorDialogAria = t(language, 'accent_color_dialog_aria')
+  const noVersionLabel = t(language, 'no_version_option')
   const isGerman = language === 'de-DE'
   const LanguageFlagIcon = isGerman ? GermanyFlagIcon : UsFlagIcon
 
@@ -324,18 +423,34 @@ function App() {
       <header className="top-header">
         <div className="header-left">
           <span className="header-brand">Bevy Extended Ui</span>
-          <select
-            className="version-select"
-            value={selectedVersion}
-            aria-label="Version"
-            onChange={(event) => setSelectedVersion(event.target.value)}
-          >
-            {availableVersions.map((version, index) => (
-              <option key={version} value={version}>
-                {index === 0 ? `${version} (Latest)` : version}
-              </option>
-            ))}
-          </select>
+          <div className="version-controls">
+            <select
+              className="version-select"
+              value={selectedVersion}
+              aria-label="Version"
+              disabled={availableVersions.length === 0}
+              onChange={(event) => setSelectedVersion(event.target.value)}
+            >
+              {availableVersions.length === 0 ? (
+                <option value={NO_VERSION_VALUE}>{noVersionLabel}</option>
+              ) : (
+                availableVersions.map((version, index) => (
+                  <option key={version} value={version}>
+                    {index === 0 ? `${version} (Latest)` : version}
+                  </option>
+                ))
+              )}
+            </select>
+            <label className="beta-filter">
+              <input
+                type="checkbox"
+                checked={includeBetaVersions}
+                aria-label="Beta"
+                onChange={(event) => setIncludeBetaVersions(event.target.checked)}
+              />
+              <span>Beta</span>
+            </label>
+          </div>
         </div>
 
         <div className="header-right">
@@ -470,7 +585,7 @@ function App() {
         </main>
       </div>
 
-      {isDocsLoading ? (
+      {selectedVersion !== NO_VERSION_VALUE && isDocsLoading ? (
         <div className="docs-loading-overlay" role="status" aria-live="polite" aria-label="Docs loading">
           <div className="docs-loading-card">
             <span className="docs-loading-spinner" aria-hidden="true" />
@@ -482,13 +597,20 @@ function App() {
       {isAccentOpen ? (
         <div className="accent-modal-overlay" onClick={(event) => event.target === event.currentTarget && setIsAccentOpen(false)}>
           <div className="accent-modal-card" role="dialog" aria-modal="true" aria-label={accentColorDialogAria}>
-            <input
-              className="accent-color-input"
-              type="color"
-              value={accentColor}
-              aria-label={accentColorPickerAria}
-              onChange={onAccentColorChange}
-            />
+            <div className="accent-palette" role="listbox" aria-label={accentColorPickerAria}>
+              {ACCENT_COLOR_OPTIONS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`accent-swatch ${accentColor === color ? 'selected' : ''}`}
+                  style={{ backgroundColor: color }}
+                  aria-label={`${accentColorPickerAria}: ${color}`}
+                  aria-pressed={accentColor === color}
+                  title={color}
+                  onClick={() => selectAccentColor(color)}
+                />
+              ))}
+            </div>
           </div>
         </div>
       ) : null}

@@ -40,44 +40,22 @@ function flatIndex(entries: string[]) {
   }
 }
 
-function githubTree(entries: string[]) {
-  return {
-    tree: entries.map((path) => ({ path, type: 'blob' })),
-    truncated: false,
-  }
-}
-
-function directoryListing(ref: string, paths: string[]) {
-  return paths.map((path) => `<a href="/gh/exepta/bevy_extended_ui@${ref}/${path}">${path}</a>`).join('\n')
-}
-
-function isMainMarkdownRequest(url: string) {
-  return (
-    (url.includes('raw.githubusercontent.com') && url.includes('/main/docs/')) ||
-    (url.includes('cdn.jsdelivr.net') && url.includes('@main/docs/'))
-  )
-}
-
 describe('github docs', () => {
   afterEach(() => {
     resetRemoteDocsCache()
     vi.restoreAllMocks()
   })
 
-  it('uses main branch for latest version', async () => {
+  it('uses version tags for latest version and does not request main', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)
 
-      if (url.includes('api.github.com') && url.includes('/git/trees/main?recursive=1')) {
-        return jsonResponse(githubTree(['docs/Getting Started/en_US/Overview.md'])) as unknown as Response
-      }
-
-      if (url.includes('data.jsdelivr.com') && url.includes('@main/flat')) {
+      if (url.includes('data.jsdelivr.com') && url.includes('@v1.4.2/flat')) {
         return jsonResponse(flatIndex(['docs/Getting Started/en_US/Overview.md'])) as unknown as Response
       }
 
-      if (isMainMarkdownRequest(url)) {
-        return textResponse('# Main Overview') as unknown as Response
+      if (url.includes('cdn.jsdelivr.net') && url.includes('@v1.4.2/docs/')) {
+        return textResponse('# Tag Overview') as unknown as Response
       }
 
       return errorResponse(404) as unknown as Response
@@ -91,23 +69,19 @@ describe('github docs', () => {
         entries: ['Overview'],
       },
     ])
-    expect(bundle?.docsByKey['Getting Started/Overview']).toContain('Main Overview')
-    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('@v1.4.2/docs/'))
+    expect(bundle?.docsByKey['Getting Started/Overview']).toContain('Tag Overview')
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('@main/'))).toBe(false)
   })
 
   it('falls back to english docs if requested locale is missing', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)
 
-      if (url.includes('api.github.com') && url.includes('/git/trees/main?recursive=1')) {
-        return jsonResponse(githubTree(['docs/Getting Started/en_US/Overview.md'])) as unknown as Response
-      }
-
-      if (url.includes('data.jsdelivr.com') && url.includes('@main/flat')) {
+      if (url.includes('data.jsdelivr.com') && url.includes('@v1.4.2/flat')) {
         return jsonResponse(flatIndex(['docs/Getting Started/en_US/Overview.md'])) as unknown as Response
       }
 
-      if (isMainMarkdownRequest(url)) {
+      if (url.includes('cdn.jsdelivr.net') && url.includes('@v1.4.2/docs/')) {
         return textResponse('# EN Overview') as unknown as Response
       }
 
@@ -139,68 +113,6 @@ describe('github docs', () => {
 
     const bundle = await fetchRemoteDocsBundle('1.4.0', 'en_US')
     expect(bundle?.docsByKey['Getting Started/Overview']).toContain('Tag Overview')
-  })
-
-  it('uses main ref when preferMainRef is enabled', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input)
-
-      if (url.includes('api.github.com') && url.includes('/git/trees/main?recursive=1')) {
-        return jsonResponse(githubTree(['docs/Getting Started/en_US/Overview.md'])) as unknown as Response
-      }
-
-      if (url.includes('data.jsdelivr.com') && url.includes('@main/flat')) {
-        return jsonResponse(flatIndex(['docs/Getting Started/en_US/Overview.md'])) as unknown as Response
-      }
-
-      if (isMainMarkdownRequest(url)) {
-        return textResponse('# Main Preferred') as unknown as Response
-      }
-
-      return errorResponse(404) as unknown as Response
-    })
-
-    const bundle = await fetchRemoteDocsBundle('1.4.0', 'en_US', { preferMainRef: true })
-    expect(bundle?.docsByKey['Getting Started/Overview']).toContain('Main Preferred')
-    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('@v1.4.0/docs/'))
-    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('@1.4.0/docs/'))
-  })
-
-  it('falls back from github tree to jsDelivr and probes widget directories on main', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input)
-
-      if (url.includes('api.github.com') && url.includes('/git/trees/main?recursive=1')) {
-        return errorResponse(403) as unknown as Response
-      }
-
-      if (url.includes('data.jsdelivr.com') && url.includes('@main/flat')) {
-        return jsonResponse(flatIndex(['docs/Getting Started/en_US/Overview.md'])) as unknown as Response
-      }
-
-      if (url.includes('cdn.jsdelivr.net') && url.includes('@main/docs/Widgets/en_US/')) {
-        return textResponse(directoryListing('main', ['docs/Widgets/en_US/01_Button.md'])) as unknown as Response
-      }
-
-      if (url.includes('cdn.jsdelivr.net') && url.includes('@main/docs/Widgets/de_DE/')) {
-        return errorResponse(404) as unknown as Response
-      }
-
-      if (url.includes('raw.githubusercontent.com') && url.includes('Getting%20Started/en_US/Overview.md')) {
-        return textResponse('# Main Overview') as unknown as Response
-      }
-
-      if (url.includes('raw.githubusercontent.com') && url.includes('docs/Widgets/en_US/01_Button.md')) {
-        return textResponse('# Main Button') as unknown as Response
-      }
-
-      return errorResponse(404) as unknown as Response
-    })
-
-    const bundle = await fetchRemoteDocsBundle('1.4.2', 'en_US')
-
-    expect(bundle?.docsByKey['Getting Started/Overview']).toContain('Main Overview')
-    expect(bundle?.docsByKey['Widgets/01_Button']).toContain('Main Button')
   })
 
   it('supports locale-first and locale-last docs paths and ignores invalid categoryless paths', async () => {
