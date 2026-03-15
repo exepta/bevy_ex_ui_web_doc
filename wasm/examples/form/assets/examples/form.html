@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="form-example">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="base.css">
+</head>
+<body>
+<div class="display-center">
+  <h3 id="form-result">Fill and submit</h3>
+</div>
+<form class="login-form" action="login_action" validate="send">
+  <h2>Login Form</h2>
+  <label for="username">Username</label>
+  <input id="username" name="username" type="text" placeholder="Your username" required validation="length(3, 32)">
+  <label for="email">Email</label>
+  <input id="email" name="email" type="email" placeholder="name@example.com" required>
+  <label for="password">Password</label>
+  <input id="password" name="password" type="password" placeholder="Password" required validation="length(8, 64)">
+  <button type="submit">Submit</button>
+</form>
+</body>
+</html>

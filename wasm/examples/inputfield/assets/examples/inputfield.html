@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="inputfield-example">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="base.css">
+</head>
+<body>
+<div class="display-center">
+  <h3 id="input-live">-</h3>
+</div>
+<label for="text">Text</label>
+<input onchange="on_text_change" id="text" type="text" placeholder="Enter text" validation="required & length(1, 100)">
+<label for="text-icon">Text With Icon</label>
+<input id="text-icon" type="text" placeholder="Enter text" icon="examples/icons/check-mark.png">
+<label for="email">Email</label>
+<input id="email" type="email" placeholder="name@example.com">
+</body>
+</html>

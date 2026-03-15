@@ -1,0 +1,7 @@
+[build]
+target = "index.html"
+dist = "../../../public/examples/scrollbar"
+public_url = "/examples/scrollbar/"
+
+[watch]
+ignore = ["../../../public/examples/scrollbar"]

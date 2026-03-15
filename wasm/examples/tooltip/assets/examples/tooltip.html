@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="tooltip-example">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="base.css">
+</head>
+<body>
+<div class="display-center">
+  <h3 id="tooltip-state">Hover or click the button</h3>
+</div>
+<button id="tooltip-anchor" onclick="tooltip_button_click">Tooltip Target</button>
+<tool-tip for="tooltip-anchor" trigger="hover | click" prio="top" alignment="horizontal" variant="point">
+  ToolTip Widget in action.
+</tool-tip>
+</body>
+</html>

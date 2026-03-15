@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="button-example">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="base.css">
+</head>
+<body>
+<div class="display-center">
+  <h3>Button Widget Demo</h3>
+  <p class="muted">Hover button swaps icon side. Toggle changes disabled state.</p>
+</div>
+<button id="target-button">Enabled</button>
+<button onclick="toggle_button_state">Toggle Disabled</button>
+<button id="icon-key" onmouseenter="icon_right" onmouseleave="icon_left">
+  <icon src="examples/icons/check-mark.png"></icon>
+  Hover for icon move
+</button>
+</body>
+</html>

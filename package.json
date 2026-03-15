@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "wasm:example:build": "bash scripts/trunk-build-all.sh",
+    "wasm:example:build:button": "bash scripts/trunk-build.sh wasm/examples/button",
     "wasm:build:button": "bash scripts/trunk-build.sh wasm/examples/button",
-    "wasm:build": "pnpm wasm:build:button",
+    "wasm:build": "pnpm wasm:example:build",
     "docker:build": "docker build -t bevy-ex-ui-web-doc .",
     "docker:run": "docker run --rm -p 8080:80 bevy-ex-ui-web-doc",
     "lint": "eslint .",
