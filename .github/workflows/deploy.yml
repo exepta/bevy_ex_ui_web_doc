@@ -119,6 +119,7 @@ jobs:
             if ! docker image inspect 'bevy-docs:release-current' >/dev/null 2>&1; then docker tag '${IMAGE_REF}' 'bevy-docs:release-current'; fi; \
             cd '${REMOTE_DIR}'; \
             docker compose up -d --remove-orphans bevy-docs-beta bevy-docs-release reverse-proxy; \
+            docker compose restart reverse-proxy; \
             rm -f '/tmp/${ARCHIVE_NAME}'"
 
       - name: Smoke test on server
