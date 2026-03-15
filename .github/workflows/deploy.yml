@@ -140,6 +140,12 @@ jobs:
               docker logs --tail=200 bevy-docs-edge || true; \
               docker logs --tail=200 ${TARGET_CONTAINER} || true; \
               exit 1; \
+            fi; \
+            if ! docker exec bevy-docs-edge wget -qO- --header='Host: ${DOMAIN}' 'http://127.0.0.1/examples/button/' >/dev/null; then \
+              docker ps; \
+              docker logs --tail=200 bevy-docs-edge || true; \
+              docker logs --tail=200 ${TARGET_CONTAINER} || true; \
+              exit 1; \
             fi"
 
       - name: Cleanup local archive
