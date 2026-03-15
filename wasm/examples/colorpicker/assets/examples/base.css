@@ -1,0 +1,119 @@
+:root {
+  --bg: #101722;
+  --panel: #152233;
+  --panel-border: #2e4360;
+  --text: #e6eef8;
+  --muted: #94a9c2;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  color: var(--text);
+}
+
+h1, h2, h3, h4, h5, h6, p {
+  margin: 0;
+}
+
+.demo-card,
+.display-container,
+.display-center,
+.display-scroll,
+.login-form {
+  background: var(--panel);
+  border: 1px var(--panel-border);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.demo-card,
+.display-container,
+.display-center,
+.login-form {
+  width: 420px;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.display-scroll {
+  width: 420px;
+  max-width: 92vw;
+  height: 220px;
+  overflow: scroll;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+button,
+checkbox,
+select,
+input,
+slider,
+switch,
+toggle,
+date-picker,
+progressbar,
+fieldset,
+scroll {
+  width: 420px;
+  max-width: 92vw;
+}
+
+colorpicker {
+  width: fit-content;
+  max-width: 100%;
+}
+
+fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+label {
+  width: 420px;
+  max-width: 92vw;
+  color: var(--muted);
+}
+
+.login-form button,
+.login-form input {
+  width: 100%;
+}
+
+img {
+  width: 64px;
+  height: 64px;
+}

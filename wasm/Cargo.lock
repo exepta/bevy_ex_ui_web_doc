@@ -1523,6 +1523,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_extended_ui",
+ "bevy_extended_ui_macros",
  "console_error_panic_hook",
  "getrandom 0.3.4",
  "web-sys",
@@ -1633,6 +1634,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
+name = "checkbox_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
+
+[[package]]
+name = "choicebox_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
+
+[[package]]
 name = "clipboard-win"
 version = "5.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1657,6 +1682,18 @@ name = "color_quant"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
+
+[[package]]
+name = "colorpicker_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
 
 [[package]]
 name = "combine"
@@ -2030,6 +2067,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "datepicker_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
+
+[[package]]
 name = "derive_more"
 version = "0.99.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2088,6 +2137,18 @@ name = "disqualified"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c9c272297e804878a2a4b707cfcfc6d2328b5bb936944613b4fdf2b9269afdfd"
+
+[[package]]
+name = "divider_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
 
 [[package]]
 name = "dlib"
@@ -2270,6 +2331,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fieldset_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2361,6 +2434,18 @@ name = "foreign-types-shared"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
+
+[[package]]
+name = "form_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
 
 [[package]]
 name = "funty"
@@ -2703,6 +2788,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "headline_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
+
+[[package]]
 name = "heapless"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2792,6 +2889,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "img_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2801,6 +2910,18 @@ dependencies = [
  "hashbrown 0.16.1",
  "serde",
  "serde_core",
+]
+
+[[package]]
+name = "inputfield_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
 ]
 
 [[package]]
@@ -3598,6 +3719,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f222829ae9293e33a9f5e9f440c6760a3d450a64affe1846486b140db81c1f4"
 
 [[package]]
+name = "paragraph_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
+
+[[package]]
 name = "parcel_selectors"
 version = "0.28.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3948,6 +4081,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3eb8486b569e12e2c32ad3e204dbaba5e4b5b216e9367044f25f1dba42341773"
 
 [[package]]
+name = "progressbar_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
+
+[[package]]
 name = "ptr_meta"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3999,6 +4144,18 @@ name = "r-efi"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+
+[[package]]
+name = "radiobutton_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
 
 [[package]]
 name = "radium"
@@ -4371,6 +4528,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
+name = "scrollbar_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
+
+[[package]]
 name = "seahash"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4551,6 +4720,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
+name = "slider_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
+
+[[package]]
 name = "slotmap"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4653,6 +4834,18 @@ dependencies = [
  "skrifa 0.37.0",
  "yazi",
  "zeno",
+]
+
+[[package]]
+name = "switchbutton_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
 ]
 
 [[package]]
@@ -4809,6 +5002,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
+name = "togglebutton_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
+]
+
+[[package]]
 name = "toml_datetime"
 version = "0.7.5+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4836,6 +5041,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "702d4415e08923e7e1ef96cd5727c0dfed80b4d2fa25db9647fe5eb6f7c5a4c4"
 dependencies = [
  "winnow",
+]
+
+[[package]]
+name = "tooltip_example"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_extended_ui",
+ "bevy_extended_ui_macros",
+ "console_error_panic_hook",
+ "getrandom 0.3.4",
+ "web-sys",
 ]
 
 [[package]]

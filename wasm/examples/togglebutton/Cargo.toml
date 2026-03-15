@@ -1,0 +1,26 @@
+[package]
+name = "togglebutton_example"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+bevy = { version = "0.18", default-features = false, features = [
+  "bevy_winit",
+  "bevy_window",
+  "bevy_ui",
+  "bevy_text",
+  "bevy_render",
+  "bevy_core_pipeline",
+  "bevy_sprite",
+  "png",
+  "webgl2",
+  "default_font"
+] }
+bevy_extended_ui = { version = "1.4.2", default-features = false, features = ["wasm-default"] }
+bevy_extended_ui_macros = { version = "1.4.2" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }
+console_error_panic_hook = "0.1"
+web-sys = { version = "0.3", features = ["Window", "Location", "UrlSearchParams"] }

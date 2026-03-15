@@ -1,0 +1,7 @@
+[build]
+target = "index.html"
+dist = "../../../public/examples/fieldset"
+public_url = "/examples/fieldset/"
+
+[watch]
+ignore = ["../../../public/examples/fieldset"]
