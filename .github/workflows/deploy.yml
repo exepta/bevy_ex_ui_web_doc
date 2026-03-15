@@ -46,6 +46,32 @@ jobs:
       - name: Run unit tests
         run: pnpm run test:run
 
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo registry and wasm target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            wasm/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('wasm/Cargo.lock') }}
+
+      - name: Install trunk
+        run: |
+          echo "${HOME}/.cargo/bin" >> "${GITHUB_PATH}"
+          if command -v trunk >/dev/null 2>&1; then
+            trunk --version
+          else
+            cargo install trunk --locked
+          fi
+
+      - name: Build wasm examples
+        run: pnpm run wasm:example:build
+
       - name: Resolve deploy target
         id: target
         run: |
@@ -55,10 +81,12 @@ jobs:
             beta)
               echo "deploy_env=beta" >> "$GITHUB_OUTPUT"
               echo "domain=dev.tilt-us.com" >> "$GITHUB_OUTPUT"
+              echo "target_container=bevy-docs-beta" >> "$GITHUB_OUTPUT"
               ;;
             release)
               echo "deploy_env=release" >> "$GITHUB_OUTPUT"
               echo "domain=tilt-us.com" >> "$GITHUB_OUTPUT"
+              echo "target_container=bevy-docs-release" >> "$GITHUB_OUTPUT"
               ;;
             *)
               echo "Unsupported branch ${GITHUB_REF_NAME}" >&2
@@ -117,14 +145,34 @@ jobs:
             if ! docker image inspect 'bevy-docs:release-current' >/dev/null 2>&1; then docker tag '${IMAGE_REF}' 'bevy-docs:release-current'; fi; \
             cd '${REMOTE_DIR}'; \
             docker compose up -d --remove-orphans bevy-docs-beta bevy-docs-release reverse-proxy; \
+            docker compose restart reverse-proxy; \
             rm -f '/tmp/${ARCHIVE_NAME}'"
 
       - name: Smoke test on server
         env:
           DOMAIN: ${{ steps.target.outputs.domain }}
+          TARGET_CONTAINER: ${{ steps.target.outputs.target_container }}
         run: |
           ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "docker exec bevy-docs-edge wget -qO- --header='Host: ${DOMAIN}' 'http://127.0.0.1/libraries/docs/bevy_extended_ui/' >/dev/null"
+            "set -euo pipefail; \
+            if ! docker exec bevy-docs-edge wget -qO- 'http://${TARGET_CONTAINER}/' >/dev/null; then \
+              docker ps; \
+              docker logs --tail=200 bevy-docs-edge || true; \
+              docker logs --tail=200 ${TARGET_CONTAINER} || true; \
+              exit 1; \
+            fi; \
+            if ! docker exec bevy-docs-edge wget -qO- --header='Host: ${DOMAIN}' 'http://127.0.0.1/libraries/docs/bevy_extended_ui/' >/dev/null; then \
+              docker ps; \
+              docker logs --tail=200 bevy-docs-edge || true; \
+              docker logs --tail=200 ${TARGET_CONTAINER} || true; \
+              exit 1; \
+            fi; \
+            if ! docker exec bevy-docs-edge wget -qO- --header='Host: ${DOMAIN}' 'http://127.0.0.1/examples/button/' >/dev/null; then \
+              docker ps; \
+              docker logs --tail=200 bevy-docs-edge || true; \
+              docker logs --tail=200 ${TARGET_CONTAINER} || true; \
+              exit 1; \
+            fi"
 
       - name: Cleanup local archive
         if: always()
