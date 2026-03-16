@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bevy Wasm Base</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: transparent;
+      }
+
+      #bevy {
+        width: 100%;
+        height: 100%;
+        display: block;
+        border: 0;
+        outline: none;
+        box-shadow: none;
+      }
+
+      #bevy:focus,
+      #bevy:focus-visible {
+        border: 0;
+        outline: none;
+        box-shadow: none;
+      }
+
+      html:focus,
+      html:focus-visible,
+      body:focus,
+      body:focus-visible,
+      canvas:focus,
+      canvas:focus-visible {
+        outline: none;
+      }
+    </style>
+    <link data-trunk rel="rust" data-bin="base_example" />
+    <link data-trunk rel="copy-dir" href="assets" />
+  </head>
+  <body>
+    <canvas id="bevy"></canvas>
+  </body>
+</html>

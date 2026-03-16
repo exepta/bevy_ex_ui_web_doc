@@ -28,21 +28,29 @@ describe('github versions', () => {
     vi.restoreAllMocks()
   })
 
-  it('keeps latest and adds only versions that contain docs', async () => {
+  it('returns only stable tags that contain docs by default', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockImplementation(async (input: RequestInfo | URL) => {
         const url = String(input)
 
         if (url.endsWith('/package/gh/exepta/bevy_extended_ui')) {
-          return jsonResponse({ versions: ['1.4.2', '1.4.0', '1.3.0'] }) as unknown as Response
+          return jsonResponse({ versions: ['1.4.2', '1.4.2.beta.1', '1.4.0', '1.3.0'] }) as unknown as Response
         }
 
-        if (url.includes('@1.4.0/flat')) {
+        if (url.includes('@1.4.2/flat')) {
+          return jsonResponse({ files: [{ name: '/docs/README.md' }] }) as unknown as Response
+        }
+
+        if (url.includes('@v1.4.2/flat')) {
+          return errorResponse(404) as unknown as Response
+        }
+
+        if (url.includes('@1.4.0/flat') || url.includes('@v1.4.0/flat')) {
           return jsonResponse({ files: [{ name: '/docs/Getting Started/en_US/Overview.md' }] }) as unknown as Response
         }
 
-        if (url.includes('@1.3.0/flat')) {
+        if (url.includes('@1.3.0/flat') || url.includes('@v1.3.0/flat')) {
           return errorResponse(404) as unknown as Response
         }
 
@@ -54,19 +62,51 @@ describe('github versions', () => {
     expect(versions).toEqual(['1.4.2', '1.4.0'])
   })
 
-  it('falls back to latest when GitHub is unavailable', async () => {
+  it('includes beta tags when explicitly enabled and docs exist', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.endsWith('/package/gh/exepta/bevy_extended_ui')) {
+        return jsonResponse({
+          versions: ['1.4.2.beta.2', '1.4.2.beta.1', '1.4.2', '1.4.1'],
+        }) as unknown as Response
+      }
+
+      if (url.includes('@1.4.2/flat')) {
+        return jsonResponse({ files: [{ name: '/docs/Getting Started/en_US/Overview.md' }] }) as unknown as Response
+      }
+
+      if (url.includes('@1.4.2.beta.2/flat')) {
+        return jsonResponse({ files: [{ name: '/docs/Widgets/en_US/01_Button.md' }] }) as unknown as Response
+      }
+
+      if (url.includes('@1.4.2.beta.1/flat')) {
+        return jsonResponse({ files: [{ name: '/README.md' }] }) as unknown as Response
+      }
+
+      if (url.includes('@1.4.1/flat')) {
+        return jsonResponse({ files: [{ name: '/docs/Getting Started/en_US/Overview.md' }] }) as unknown as Response
+      }
+
+      return errorResponse(404) as unknown as Response
+    })
+
+    await expect(fetchAvailableVersions({ includeBeta: true })).resolves.toEqual(['1.4.2', '1.4.2.beta.2', '1.4.1'])
+  })
+
+  it('returns an empty list when GitHub is unavailable', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network error'))
 
-    await expect(fetchAvailableVersions()).resolves.toEqual(['1.4.2'])
+    await expect(fetchAvailableVersions()).resolves.toEqual([])
   })
 
-  it('falls back to latest when versions endpoint returns non-OK', async () => {
+  it('returns an empty list when versions endpoint returns non-OK', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(errorResponse(500) as unknown as Response)
 
-    await expect(fetchAvailableVersions()).resolves.toEqual(['1.4.2'])
+    await expect(fetchAvailableVersions()).resolves.toEqual([])
   })
 
-  it('falls back to latest when docs check returns non-404 error', async () => {
+  it('returns an empty list when docs check returns non-404 error', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)
 
@@ -77,7 +117,7 @@ describe('github versions', () => {
       return errorResponse(500) as unknown as Response
     })
 
-    await expect(fetchAvailableVersions()).resolves.toEqual(['1.4.2'])
+    await expect(fetchAvailableVersions()).resolves.toEqual([])
   })
 
   it('normalizes, filters and deduplicates versions', async () => {
@@ -86,11 +126,15 @@ describe('github versions', () => {
 
       if (url.endsWith('/package/gh/exepta/bevy_extended_ui')) {
         return jsonResponse({
-          versions: ['1.4.2', 'v1.4.0', '1.4.0', '1.4.0-beta.1', 'foo'],
+          versions: ['1.4.2', 'v1.4.0', '1.4.0', '1.4.0.beta.1', 'foo'],
         }) as unknown as Response
       }
 
-      if (url.includes('@1.4.0/flat')) {
+      if (url.includes('@1.4.2/flat')) {
+        return jsonResponse({ files: [{ name: '/docs/README.md' }] }) as unknown as Response
+      }
+
+      if (url.includes('@1.4.0/flat') || url.includes('@v1.4.0/flat')) {
         return jsonResponse({ files: [{ name: '/docs/Getting Started/en_US/Overview.md' }] }) as unknown as Response
       }
 
@@ -108,6 +152,10 @@ describe('github versions', () => {
         return jsonResponse({
           versions: ['1.4.3', '1.4.2', '1.4.1'],
         }) as unknown as Response
+      }
+
+      if (url.includes('@1.4.3/flat')) {
+        return jsonResponse({ files: [{ name: '/docs/Getting Started/en_US/Overview.md' }] }) as unknown as Response
       }
 
       if (url.includes('@1.4.2/flat')) {

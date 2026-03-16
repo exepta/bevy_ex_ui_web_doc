@@ -18,6 +18,14 @@ if [[ ${#example_dirs[@]} -eq 0 ]]; then
   exit 1
 fi
 
+dynamic_base_dir="${examples_root}/base"
+if [[ -d "${dynamic_base_dir}" && -f "${dynamic_base_dir}/Trunk.toml" ]]; then
+  echo "==> Building dynamic WASM base ${dynamic_base_dir}"
+  bash "${trunk_build_script}" "${dynamic_base_dir}"
+  echo "Built 1 WASM example (dynamic base)."
+  exit 0
+fi
+
 built_count=0
 for example_dir in "${example_dirs[@]}"; do
   if [[ ! -f "${example_dir}/Trunk.toml" ]]; then

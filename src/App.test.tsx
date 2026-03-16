@@ -31,7 +31,12 @@ describe('App', () => {
         },
       } satisfies Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>,
     })
-    vi.mocked(fetchAvailableVersions).mockResolvedValue(['1.4.2', '1.4.0', '1.3.0'])
+    vi.mocked(fetchAvailableVersions).mockImplementation(async (options?: { includeBeta?: boolean }) => {
+      if (options?.includeBeta) {
+        return ['1.4.2', '1.4.2.beta.1', '1.4.0', '1.3.0']
+      }
+      return ['1.4.2', '1.4.0', '1.3.0']
+    })
     vi.mocked(fetchRemoteDocsBundle).mockImplementation(async (version, locale) => {
       if (version === '1.3.0') {
         return null
@@ -90,6 +95,10 @@ describe('App', () => {
 
     expect(screen.getByRole('option', { name: '1.4.2 (Latest)' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: '1.4.0' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: '1.4.2.beta.1' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Beta' }))
+    await waitFor(() => expect(screen.getByRole('option', { name: '1.4.2.beta.1' })).toBeInTheDocument())
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Version' }), { target: { value: '1.4.0' } })
     expect(await screen.findByRole('heading', { level: 1, name: /Bevy Extended UI - Overview \(v1.4.0\)/ })).toBeInTheDocument()
@@ -101,13 +110,14 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { level: 1, name: /Bevy Extended UI - Overview/ })).toBeInTheDocument()
   }, 15000)
 
-  it('keeps default version when remote version list is empty', async () => {
+  it('shows no-version option when remote version list is empty', async () => {
     vi.mocked(fetchAvailableVersions).mockResolvedValueOnce([])
 
     render(<App />)
 
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Version' })).toHaveValue('1.4.2'))
-    expect(screen.getByRole('option', { name: '1.4.2 (Latest)' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Version' })).toBeDisabled())
+    expect(screen.getByRole('option', { name: 'No Version' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Version' })).toHaveValue('__no_version__')
   })
 
   it('persists theme, language and accent color', async () => {
@@ -117,16 +127,26 @@ describe('App', () => {
     await waitFor(() => expect(localStorage.getItem('bevy_ex_ui_web_doc_theme')).toBe('dark'))
 
     fireEvent.click(screen.getByRole('button', { name: 'Accent color' }))
-    const colorInput = screen
-      .getAllByLabelText('Accent color picker')
-      .find((element) => element.tagName === 'INPUT') as HTMLInputElement
-    fireEvent.change(colorInput, { target: { value: '#ff5533' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Accent color picker: #ff5533' }))
     await waitFor(() => expect(localStorage.getItem('bevy_ex_ui_web_doc_accent')).toBe('#ff5533'))
     expect(document.documentElement.style.getPropertyValue('--brand-main')).toBe('#ff5533')
 
     fireEvent.click(screen.getByRole('button', { name: 'Language' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Deutsch' }))
     await waitFor(() => expect(localStorage.getItem('bevy_ex_ui_web_doc_language')).toBe('de-DE'))
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Beta' }))
+    await waitFor(() => expect(localStorage.getItem('bevy_ex_ui_web_doc_beta')).toBe('true'))
+  })
+
+  it('restores beta filter from storage on startup', async () => {
+    storageState.bevy_ex_ui_web_doc_beta = 'true'
+
+    render(<App />)
+
+    const betaCheckbox = screen.getByRole('checkbox', { name: 'Beta' })
+    expect(betaCheckbox).toBeChecked()
+    await waitFor(() => expect(screen.getByRole('option', { name: '1.4.2.beta.1' })).toBeInTheDocument())
   })
 
 })

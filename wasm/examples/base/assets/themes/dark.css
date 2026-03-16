@@ -1,0 +1,14 @@
+:root {
+  --primary: #7fa4ff;
+  --primary-hover: #6e95ff;
+  --primary-disabled: #4f669f;
+  --primary-transparent-layer: rgba(127, 164, 255, 0.3);
+  --headline: #e4ecff;
+  --headline-sec: #c7d4f7;
+  --text-color: #dfe9ff;
+  --text-color-dark: #a5b7de;
+  --disabled-text: #5f739f;
+  --disabled-text-darker: #556894;
+  --gray-background: #24324b;
+  --gray-background-disabled: #2c3d5a;
+}
