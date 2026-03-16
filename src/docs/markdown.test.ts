@@ -24,4 +24,13 @@ describe('markdown parser', () => {
     const parsed = parseMarkdownDoc('<iframe src="{base.url}/examples/button"></iframe>', 'http://localhost:5173')
     expect(parsed.body).toContain('http://localhost:5173/examples/button/')
   })
+
+  it('rewrites localhost example hosts to current runtime base', () => {
+    const parsed = parseMarkdownDoc(
+      '<iframe src="http://localhost:8080/examples/base/?example=button_default"></iframe>',
+      'http://localhost:5173',
+    )
+    expect(parsed.body).toContain('http://localhost:5173/examples/base/?example=button_default')
+    expect(parsed.body).not.toContain('http://localhost:8080/examples/base/')
+  })
 })
