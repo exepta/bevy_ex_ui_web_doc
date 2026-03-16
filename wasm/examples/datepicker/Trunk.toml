@@ -1,7 +1,0 @@
-[build]
-target = "index.html"
-dist = "../../../public/examples/datepicker"
-public_url = "/examples/datepicker/"
-
-[watch]
-ignore = ["../../../public/examples/datepicker"]

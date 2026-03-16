@@ -4,6 +4,7 @@ export type ParsedMarkdownDoc = {
 }
 
 const baseUrlPlaceholderPattern = /\{base\.url\}/gi
+const localhostExamplesPattern = /https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(\/examples\/[A-Za-z0-9_-]+\/?(?:\?[^\s"'()<>]*)?)/gi
 
 function parseFrontmatter(source: string): ParsedMarkdownDoc {
   if (!source.startsWith('---\n')) {
@@ -41,7 +42,14 @@ function replaceBaseUrlPlaceholder(source: string, baseUrl?: string) {
 
   const normalizedBaseUrl = baseUrl.replace(/\/$/, '')
   const withBaseUrl = source.replace(baseUrlPlaceholderPattern, normalizedBaseUrl)
-  return withBaseUrl.replace(/((?:https?:\/\/[^\s"'()<>]+)?\/examples\/[A-Za-z0-9_-]+)(?=["')\s])/g, '$1/')
+  const withNormalizedLocalhostExamples = withBaseUrl.replace(
+    localhostExamplesPattern,
+    (_, examplePath: string) => `${normalizedBaseUrl}${examplePath}`,
+  )
+  return withNormalizedLocalhostExamples.replace(
+    /((?:https?:\/\/[^\s"'()<>]+)?\/examples\/[A-Za-z0-9_-]+)(?=["')\s])/g,
+    '$1/',
+  )
 }
 
 export function parseMarkdownDoc(source: string, baseUrl?: string) {

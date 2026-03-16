@@ -57,6 +57,10 @@ describe('MarkdownPage', () => {
     const iframe = container.querySelector('iframe')
     expect(iframe).not.toBeNull()
     expect(iframe?.getAttribute('src')).toContain('theme=dark')
+    expect(iframe?.getAttribute('src')).not.toContain('localhost:8080')
+    expect(iframe?.getAttribute('src')).toContain('/examples/button/')
+    expect(iframe?.getAttribute('width')).toBe('50%')
+    expect(iframe?.getAttribute('height')).toBe('450px')
   })
 
   it('highlights fenced code blocks with language classes', () => {

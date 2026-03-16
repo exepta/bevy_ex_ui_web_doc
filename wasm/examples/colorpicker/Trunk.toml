@@ -1,7 +1,0 @@
-[build]
-target = "index.html"
-dist = "../../../public/examples/colorpicker"
-public_url = "/examples/colorpicker/"
-
-[watch]
-ignore = ["../../../public/examples/colorpicker"]
