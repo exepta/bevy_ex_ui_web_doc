@@ -14,6 +14,7 @@ const initialDocs = listDocs(DEFAULT_VERSION, DEFAULT_DOCS_LOCALE)
 const STORAGE_THEME_KEY = 'bevy_ex_ui_web_doc_theme'
 const STORAGE_LANGUAGE_KEY = 'bevy_ex_ui_web_doc_language'
 const STORAGE_ACCENT_KEY = 'bevy_ex_ui_web_doc_accent'
+const STORAGE_BETA_KEY = 'bevy_ex_ui_web_doc_beta'
 const DEFAULT_THEME: 'light' | 'dark' = 'light'
 const DEFAULT_LANGUAGE: LanguageCode = 'en-US'
 const DEFAULT_ACCENT_COLOR = '#195cc7'
@@ -151,6 +152,10 @@ function normalizeAccentColor(value: string | null | undefined) {
   return ACCENT_COLOR_SET.has(trimmed) ? trimmed : DEFAULT_ACCENT_COLOR
 }
 
+function parseIncludeBeta(value: string | null) {
+  return value === 'true'
+}
+
 function GithubIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -226,7 +231,7 @@ function ChevronDownIcon() {
 function App() {
   const [selectedVersion, setSelectedVersion] = useState(DEFAULT_VERSION)
   const [availableVersions, setAvailableVersions] = useState<string[]>([DEFAULT_VERSION])
-  const [includeBetaVersions, setIncludeBetaVersions] = useState(false)
+  const [includeBetaVersions, setIncludeBetaVersions] = useState(() => parseIncludeBeta(getStorageValue(STORAGE_BETA_KEY)))
   const [activeEntry, setActiveEntry] = useState<ActiveEntry | null>(() => getDefaultEntry(initialDocs))
   const [theme, setTheme] = useState<'light' | 'dark'>(() => parseTheme(getStorageValue(STORAGE_THEME_KEY)))
   const [language, setLanguage] = useState<LanguageCode>(() => parseLanguage(getStorageValue(STORAGE_LANGUAGE_KEY)))
@@ -288,6 +293,10 @@ function App() {
   useEffect(() => {
     setStorageValue(STORAGE_LANGUAGE_KEY, language)
   }, [language])
+
+  useEffect(() => {
+    setStorageValue(STORAGE_BETA_KEY, String(includeBetaVersions))
+  }, [includeBetaVersions])
 
   useEffect(() => {
     if (!isAccentOpen) {
@@ -374,10 +383,7 @@ function App() {
     ? getDocMarkdown(selectedVersion, activeEntry.category, activeEntry.entry, docsLocale)
     : null
   const markdownSource = remoteMarkdownSource ?? localMarkdownSource
-  const runtimeBaseUrl =
-    typeof window === 'undefined'
-      ? ''
-      : new URL(import.meta.env.BASE_URL, window.location.origin).toString().replace(/\/$/, '')
+  const runtimeBaseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')
   const parsedDoc = useMemo(
     () => (markdownSource ? parseMarkdownDoc(markdownSource, runtimeBaseUrl) : null),
     [markdownSource, runtimeBaseUrl],

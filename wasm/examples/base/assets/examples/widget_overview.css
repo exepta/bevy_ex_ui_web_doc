@@ -1,0 +1,41 @@
+:root {
+  --bg: transparent;
+  --text: var(--text-color);
+}
+
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  color: var(--text);
+}
+
+.base-look {
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: flex-start;
+  align-items: flex-start;
+  background: transparent;
+  border: 0;
+}
+
+.con-column {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Prevent text-color inheritance from tinting color picker gradient textures */
+colorpicker > .color-picker-modal > .color-canvas,
+colorpicker > .color-picker-modal > .color-hue-track,
+colorpicker > .color-picker-modal > .color-alpha-track {
+  color: #ffffff;
+}

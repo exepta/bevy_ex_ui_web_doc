@@ -493,14 +493,24 @@
 
 .docs-example-frame,
 .markdown-page iframe {
-  width: 100%;
-  min-height: clamp(320px, 56vh, 620px);
   display: block;
-  border: 1px solid var(--brand-main);
-  border-radius: 12px;
+  margin-inline: auto;
+  max-width: 50%;
+  height: 450px;
+  border: 0;
+  border-radius: 0;
   box-shadow: none;
   outline: none;
-  background: var(--card-alt);
+  background: transparent;
+}
+
+.docs-example-frame:focus,
+.docs-example-frame:focus-visible,
+.markdown-page iframe:focus,
+.markdown-page iframe:focus-visible {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .breadcrumb {

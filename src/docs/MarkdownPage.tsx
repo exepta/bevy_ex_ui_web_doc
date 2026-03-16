@@ -222,9 +222,32 @@ function withThemeParam(src: string | undefined, theme: 'light' | 'dark') {
   }
 
   try {
+    const sanitizedSrc = src.replace(/\{base\.url\}/gi, '')
     const base = typeof window === 'undefined' ? 'http://localhost' : window.location.origin
-    const url = new URL(src, base)
+    const url = new URL(sanitizedSrc, base)
+
+    if (
+      typeof window !== 'undefined' &&
+      (url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
+      url.pathname.startsWith('/examples/')
+    ) {
+      const runtimeOrigin = new URL(window.location.origin)
+      url.protocol = runtimeOrigin.protocol
+      url.hostname = runtimeOrigin.hostname
+      url.port = runtimeOrigin.port
+    }
+
     url.searchParams.set('theme', theme)
+
+    if (/^\/examples\/[^/?#]+$/.test(url.pathname)) {
+      url.pathname = `${url.pathname}/`
+    }
+
+    if (url.pathname.startsWith('/examples/')) {
+      const runtimeOrigin = typeof window === 'undefined' ? 'http://localhost' : window.location.origin
+      return new URL(`${url.pathname}${url.search}${url.hash}`, runtimeOrigin).toString()
+    }
+
     return url.toString()
   } catch {
     return src
@@ -246,10 +269,26 @@ function normalizeCodeLanguage(rawLanguage: string | undefined) {
 
 function MarkdownPage({ doc, theme }: MarkdownPageProps) {
   const components: Components = {
-    iframe: ({ className, src, loading, ...props }) => {
+    iframe: ({ className, src, loading, width, height, style, ...props }) => {
       const themedSrc = withThemeParam(src, theme)
       const nextClassName = className ? `${className} docs-example-frame` : 'docs-example-frame'
-      return <iframe {...props} className={nextClassName} src={themedSrc} loading={loading ?? 'lazy'} />
+      return (
+        <iframe
+          {...props}
+          className={nextClassName}
+          src={themedSrc}
+          width={width ?? '50%'}
+          height={height ?? '450px'}
+          loading={loading ?? 'lazy'}
+          frameBorder={0}
+          style={{
+            ...style,
+            border: 0,
+            outline: 'none',
+            boxShadow: 'none',
+          }}
+        />
+      )
     },
     pre: ({ ...props }) => <>{props.children}</>,
     code: ({ className, children, ...props }) => {

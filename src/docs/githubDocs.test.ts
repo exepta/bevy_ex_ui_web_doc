@@ -73,6 +73,101 @@ describe('github docs', () => {
     expect(fetchMock.mock.calls.some(([input]) => String(input).includes('@main/'))).toBe(false)
   })
 
+  it('binds wasm examples to existing markdown iframes by iframe id', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('data.jsdelivr.com') && url.includes('@v1.4.2/flat')) {
+        return jsonResponse(flatIndex(['docs/Widgets/en_US/02_Button.md'])) as unknown as Response
+      }
+
+      if (url.includes('cdn.jsdelivr.net') && url.includes('@v1.4.2/docs/Widgets/en_US/02_Button.md')) {
+        return textResponse(
+          '# Button\n\n<iframe id="button_default"></iframe>\n\n<iframe id="button_icon_only"></iframe>\n\n<iframe id="unknown"></iframe>',
+        ) as unknown as Response
+      }
+
+      if (url.includes('cdn.jsdelivr.net') && url.includes('@v1.4.2/docs/wasm_examples.json')) {
+        return jsonResponse({
+          category: [
+            {
+              name: 'button',
+              examples: [
+                {
+                  id: 'button_default',
+                  iframe_src: '{base.url}/examples/button',
+                  html: '<div><button>Default</button><button>Disabled</button></div>',
+                  css: 'column, gap:15px',
+                },
+                {
+                  id: 'button_icon_only',
+                  iframe_src: '{base.url}/examples/button',
+                  html: '<div><button><icon src="icons/check-mark.png"></icon></button></div>',
+                  css: 'row, gap:8px',
+                },
+              ],
+            },
+          ],
+        }) as unknown as Response
+      }
+
+      return errorResponse(404) as unknown as Response
+    })
+
+    const bundle = await fetchRemoteDocsBundle('1.4.2', 'en_US')
+    expect(bundle?.sections).toEqual([
+      {
+        category: 'Widgets',
+        entries: ['02_Button'],
+      },
+    ])
+    const markdown = bundle?.docsByKey['Widgets/02_Button'] ?? ''
+    expect(markdown).toContain('/examples/base/?example=button_default')
+    expect(markdown).toContain('/examples/base/?example=button_icon_only')
+    expect(markdown).toContain('<iframe id="unknown"></iframe>')
+  })
+
+  it('returns null when markdown docs are unavailable even if wasm json exists', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('data.jsdelivr.com') && url.includes('@v1.9.9/flat')) {
+        return errorResponse(404) as unknown as Response
+      }
+
+      if (url.includes('cdn.jsdelivr.net') && url.includes('@v1.9.9/docs/wasm_examples.json')) {
+        return jsonResponse({
+          category: [
+            {
+              name: 'checkbox',
+              examples: [
+                {
+                  id: 'checkbox',
+                  iframe_src: '{base.url}/examples/checkbox',
+                  html: '',
+                  css: '',
+                },
+              ],
+            },
+          ],
+        }) as unknown as Response
+      }
+
+      if (url.includes('data.jsdelivr.com') && url.includes('@1.9.9/flat')) {
+        return errorResponse(404) as unknown as Response
+      }
+
+      if (url.includes('cdn.jsdelivr.net') && url.includes('@1.9.9/docs/wasm_examples.json')) {
+        return errorResponse(404) as unknown as Response
+      }
+
+      return errorResponse(404) as unknown as Response
+    })
+
+    const bundle = await fetchRemoteDocsBundle('1.9.9', 'en_US')
+    expect(bundle).toBeNull()
+  })
+
   it('falls back to english docs if requested locale is missing', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)

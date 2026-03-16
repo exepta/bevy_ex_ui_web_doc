@@ -134,6 +134,19 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Language' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Deutsch' }))
     await waitFor(() => expect(localStorage.getItem('bevy_ex_ui_web_doc_language')).toBe('de-DE'))
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Beta' }))
+    await waitFor(() => expect(localStorage.getItem('bevy_ex_ui_web_doc_beta')).toBe('true'))
+  })
+
+  it('restores beta filter from storage on startup', async () => {
+    storageState.bevy_ex_ui_web_doc_beta = 'true'
+
+    render(<App />)
+
+    const betaCheckbox = screen.getByRole('checkbox', { name: 'Beta' })
+    expect(betaCheckbox).toBeChecked()
+    await waitFor(() => expect(screen.getByRole('option', { name: '1.4.2.beta.1' })).toBeInTheDocument())
   })
 
 })
