@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-bevy = { version = "0.18", default-features = false, features = [
+bevy = { version = "0.18.1", default-features = false, features = [
   "bevy_winit",
   "bevy_window",
   "bevy_ui",
@@ -17,8 +17,8 @@ bevy = { version = "0.18", default-features = false, features = [
   "webgl2",
   "default_font"
 ] }
-bevy_extended_ui = { version = "1.5.0-beta.5", default-features = false, features = ["wasm-default", "providers"] }
-bevy_extended_ui_macros = { version = "1.5.0-beta.5" }
+bevy_extended_ui = { version = "1.6.0", default-features = false, features = ["wasm-default", "providers"] }
+bevy_extended_ui_macros = { version = "1.6.0" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }

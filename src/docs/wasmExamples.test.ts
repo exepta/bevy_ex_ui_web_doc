@@ -54,6 +54,28 @@ describe('wasm examples docs binding', () => {
     expect(transformed).toBe('<iframe id="button_default"></iframe>')
   })
 
+  it('falls back to iframe id mapping when markdown entry and wasm category names differ', () => {
+    const parsed = parseWasmExamplesByCategory({
+      category: [
+        {
+          name: 'listbox',
+          examples: [
+            {
+              id: 'listbox',
+              iframe_src: '{base.url}/examples/base',
+              html: '<listbox id="difficulty"><option value="easy">Easy</option></listbox>',
+              css: 'column, al:center',
+            },
+          ],
+        },
+      ],
+    })
+
+    const transformed = applyWasmExamplesToMarkdown('<iframe id="listbox"></iframe>', 'Widgets/24_List', parsed)
+    expect(transformed).toContain('/examples/base/?example=listbox')
+    expect(transformed).toContain('html=%3Clistbox')
+  })
+
   it('normalizes localhost absolute iframe_src to current app origin', () => {
     const parsed = parseWasmExamplesByCategory({
       category: [
