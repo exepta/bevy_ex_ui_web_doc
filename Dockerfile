@@ -6,7 +6,7 @@ RUN corepack enable
 ARG DOCS_BASE_PATH=/
 ENV DOCS_BASE_PATH=${DOCS_BASE_PATH}
 
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .

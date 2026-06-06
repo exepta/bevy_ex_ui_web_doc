@@ -817,10 +817,16 @@ fn toggle_change(
         return;
     }
 
-    let mut labels = Vec::new();
+    let mut labels: Vec<String> = Vec::new();
     for &entity in selections.0.iter() {
         if let Ok(toggle) = toggle_q.get(entity) {
-            labels.push(toggle.value.clone());
+            labels.push(
+                toggle
+                    .value
+                    .as_str()
+                    .unwrap_or(toggle.label.as_str())
+                    .to_string(),
+            );
         }
     }
 

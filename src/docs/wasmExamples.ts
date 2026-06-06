@@ -147,6 +147,20 @@ function buildDynamicIframeSrc(example: WasmExample) {
   return toRelativeExamplesUrl(`${target}${separator}${params.toString()}`)
 }
 
+function buildExamplesIndexByIframeId(wasmExamplesByCategory: WasmExamplesByCategory) {
+  const byIframeId = new Map<string, WasmExample>()
+
+  for (const examplesInCategory of wasmExamplesByCategory.values()) {
+    for (const [id, example] of examplesInCategory.entries()) {
+      if (!byIframeId.has(id)) {
+        byIframeId.set(id, example)
+      }
+    }
+  }
+
+  return byIframeId
+}
+
 export function parseWasmExamplesByCategory(payload: unknown): WasmExamplesByCategory {
   const categories = new Map<string, Map<string, WasmExample>>()
 
@@ -193,8 +207,10 @@ export function applyWasmExamplesToMarkdown(
     return markdownSource
   }
 
-  const byIframeId = wasmExamplesByCategory.get(docCategoryName)
-  if (!byIframeId || byIframeId.size === 0) {
+  const byCategory = wasmExamplesByCategory.get(docCategoryName)
+  const byIframeId = buildExamplesIndexByIframeId(wasmExamplesByCategory)
+
+  if ((!byCategory || byCategory.size === 0) && byIframeId.size === 0) {
     return markdownSource
   }
 
@@ -204,7 +220,7 @@ export function applyWasmExamplesToMarkdown(
       return tag
     }
 
-    const example = byIframeId.get(iframeId)
+    const example = byCategory?.get(iframeId) ?? byIframeId.get(iframeId)
     if (!example) {
       return tag
     }
