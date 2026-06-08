@@ -77,4 +77,19 @@ describe('MarkdownPage', () => {
     expect(container.querySelector('pre span')).not.toBeNull()
     expect(container.textContent).toContain('fn main()')
   })
+
+  it('highlights single-line fenced html code blocks', () => {
+    const { container } = render(
+      <MarkdownPage
+        doc={{
+          body: '```html\n<img src="ui/logo.png" alt="Project logo" oninit="log_img" />\n```',
+        }}
+        theme="dark"
+      />,
+    )
+
+    const highlightedToken = container.querySelector('pre span')
+    expect(highlightedToken).not.toBeNull()
+    expect(container.textContent).toContain('<img src="ui/logo.png" alt="Project logo" oninit="log_img" />')
+  })
 })

@@ -49,6 +49,29 @@ form {
   gap: 12px;
 }
 
+listbox {
+  background: var(--gray-background-disabled);
+  border-color: var(--text-color);
+  color: var(--text-color);
+}
+
+listbox > .listbox-option {
+  background: var(--gray-background-disabled);
+  color: var(--text-color);
+}
+
+listbox > .listbox-option > .option-text {
+  color: var(--text-color);
+}
+
+listbox > .listbox-option:hover {
+  background: var(--primary-hover);
+}
+
+listbox > .listbox-option:checked {
+  background: var(--primary);
+}
+
 /* Prevent text-color inheritance from tinting color picker gradient textures */
 colorpicker > .color-picker-modal > .color-canvas,
 colorpicker > .color-picker-modal > .color-hue-track,

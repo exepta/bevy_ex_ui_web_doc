@@ -480,13 +480,7 @@ fn main() {
 
     let runtime_example = resolve_runtime_example();
 
-    let clear = match runtime_example.theme {
-        DemoTheme::Light => Color::srgb(0.953, 0.965, 0.984),
-        DemoTheme::Dark => Color::srgb(0.059, 0.078, 0.106),
-    };
-
     App::new()
-        .insert_resource(ClearColor(clear))
         .insert_resource(runtime_example.clone())
         .insert_resource(ExtendedUiConfiguration {
             themes_path: "assets/themes".to_string(),

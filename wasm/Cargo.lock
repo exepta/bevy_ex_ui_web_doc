@@ -645,9 +645,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_extended_ui"
-version = "1.6.0-beta.4"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ebd878ef14262a27a1d8aac77d33ac4ed0639eb9e6c30d14328833384b28969"
+checksum = "878383c417fd82c0c7b5659b43981fd38a45631e97f1ae7b78a5fc1d52ef9734"
 dependencies = [
  "arboard",
  "base64",
@@ -670,9 +670,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_extended_ui_macros"
-version = "1.6.0-beta.4"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d62811563ad97c4beebb26742c2406e9ad285b15b4658161600cf37cdfa1b494"
+checksum = "c1483b54e514aed4113fbd6697a519040774142ae5cf41ef852167b73d7c871d"
 dependencies = [
  "proc-macro2",
  "quote",

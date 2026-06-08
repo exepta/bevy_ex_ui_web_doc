@@ -80,6 +80,24 @@
   gap: 0.55rem;
 }
 
+.marketplace-widget {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.marketplace-widget-section {
+  margin-top: 1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-soft);
+  padding: 1rem 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .search-input {
   height: 34px;
   width: min(240px, 42vw);
@@ -305,6 +323,12 @@
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.search-empty {
+  margin: 0.8rem 0.65rem 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 .nav-group {
