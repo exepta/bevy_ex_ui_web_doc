@@ -120,6 +120,70 @@ describe('App', () => {
     expect(screen.getByRole('combobox', { name: 'Version' })).toHaveValue('__no_version__')
   })
 
+  it('filters docs with search and finds widget creator by spaced query', async () => {
+    vi.mocked(fetchRemoteDocsBundle).mockResolvedValueOnce({
+      sections: [
+        {
+          category: 'Widgets',
+          entries: ['24_Listbox', '25_WidgetCreator'],
+        },
+        {
+          category: 'Features',
+          entries: ['01_ThemeManager'],
+        },
+      ],
+      docsByKey: {
+        'Widgets/24_Listbox': '# Listbox',
+        'Widgets/25_WidgetCreator': '# Widget Creator',
+        'Features/01_ThemeManager': '# Theme Manager',
+      },
+    })
+
+    render(<App />)
+
+    expect(await screen.findByRole('button', { name: /^Widgets$/ })).toBeInTheDocument()
+
+    const searchInput = screen.getByRole('searchbox', { name: 'Search' })
+    fireEvent.change(searchInput, { target: { value: 'widgets' } })
+
+    expect(screen.getByRole('button', { name: /^Widgets$/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Features$/ })).not.toBeInTheDocument()
+
+    fireEvent.change(searchInput, { target: { value: 'Widget Creator' } })
+    fireEvent.keyDown(searchInput, { key: 'Enter', code: 'Enter' })
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Widget Creator' })).toBeInTheDocument()
+
+    fireEvent.change(searchInput, { target: { value: 'not-existing-search-term' } })
+    expect(await screen.findByText('No matches')).toBeInTheDocument()
+  })
+
+  it('keeps search input focus while typing on docs with wasm iframe', async () => {
+    vi.mocked(fetchRemoteDocsBundle).mockResolvedValueOnce({
+      sections: [
+        {
+          category: 'Widgets',
+          entries: ['24_Listbox'],
+        },
+      ],
+      docsByKey: {
+        'Widgets/24_Listbox': '# Listbox\n\n<iframe id="listbox" src="/examples/base/"></iframe>',
+      },
+    })
+
+    render(<App />)
+
+    const searchInput = await screen.findByRole('searchbox', { name: 'Search' })
+    searchInput.focus()
+    expect(searchInput).toHaveFocus()
+
+    fireEvent.change(searchInput, { target: { value: 'list' } })
+    expect(searchInput).toHaveFocus()
+
+    fireEvent.change(searchInput, { target: { value: 'listbox' } })
+    expect(searchInput).toHaveFocus()
+  })
+
   it('persists theme, language and accent color', async () => {
     render(<App />)
 

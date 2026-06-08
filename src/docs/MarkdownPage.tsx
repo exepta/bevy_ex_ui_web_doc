@@ -2,7 +2,7 @@ import ReactMarkdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 import remarkGfm from 'remark-gfm'
 import type { Components } from 'react-markdown'
-import type { CSSProperties } from 'react'
+import { memo, useMemo, type CSSProperties } from 'react'
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
 import css from 'react-syntax-highlighter/dist/esm/languages/prism/css'
 import markup from 'react-syntax-highlighter/dist/esm/languages/prism/markup'
@@ -268,70 +268,72 @@ function normalizeCodeLanguage(rawLanguage: string | undefined) {
 }
 
 function MarkdownPage({ doc, theme }: MarkdownPageProps) {
-  const components: Components = {
-    iframe: ({ className, src, loading, width, height, style, ...props }) => {
-      const themedSrc = withThemeParam(src, theme)
-      const nextClassName = className ? `${className} docs-example-frame` : 'docs-example-frame'
-      return (
-        <iframe
-          {...props}
-          className={nextClassName}
-          src={themedSrc}
-          width={width ?? '50%'}
-          height={height ?? '450px'}
-          loading={loading ?? 'lazy'}
-          frameBorder={0}
-          style={{
-            ...style,
-            border: 0,
-            outline: 'none',
-            boxShadow: 'none',
-          }}
-        />
-      )
-    },
-    pre: ({ ...props }) => <>{props.children}</>,
-    code: ({ className, children, ...props }) => {
-      const languageMatch = /language-([A-Za-z0-9_-]+)/.exec(className ?? '')
-      const language = normalizeCodeLanguage(languageMatch?.[1])
-      const rawCode = String(children).replace(/\n$/, '')
-      const isMultiline = rawCode.includes('\n')
-
-      if (!language || !isMultiline) {
+  const components = useMemo<Components>(
+    () => ({
+      iframe: ({ className, src, loading, width, height, style, ...props }) => {
+        const themedSrc = withThemeParam(src, theme)
+        const nextClassName = className ? `${className} docs-example-frame` : 'docs-example-frame'
         return (
-          <code className={className} {...props}>
-            {children}
-          </code>
+          <iframe
+            {...props}
+            className={nextClassName}
+            src={themedSrc}
+            width={width ?? '50%'}
+            height={height ?? '450px'}
+            loading={loading ?? 'lazy'}
+            frameBorder={0}
+            style={{
+              ...style,
+              border: 0,
+              outline: 'none',
+              boxShadow: 'none',
+            }}
+          />
         )
-      }
+      },
+      pre: ({ ...props }) => <>{props.children}</>,
+      code: ({ className, children, ...props }) => {
+        const languageMatch = /language-([A-Za-z0-9_-]+)/.exec(className ?? '')
+        const language = normalizeCodeLanguage(languageMatch?.[1])
+        const rawCode = String(children).replace(/\n$/, '')
 
-      return (
-        <SyntaxHighlighter
-          language={language}
-          style={theme === 'dark' ? syntaxThemeDark : syntaxThemeLight}
-          className="docs-code-block"
-          customStyle={{
-            margin: '0.95rem 0',
-            borderRadius: '12px',
-            border: '1px solid color-mix(in srgb, var(--brand-main) 26%, var(--border-soft))',
-            padding: '0.95rem 1rem',
-            background:
-              'linear-gradient(160deg, color-mix(in srgb, var(--brand-main) 12%, var(--card-alt)) 0%, var(--card-alt) 58%)',
-            boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--brand-main) 24%, transparent)',
-          }}
-          codeTagProps={{
-            style: {
-              fontFamily: '"IBM Plex Mono", monospace',
-              fontSize: '0.88rem',
-            },
-          }}
-          wrapLongLines
-        >
-          {rawCode}
-        </SyntaxHighlighter>
-      )
-    },
-  }
+        if (!language) {
+          return (
+            <code className={className} {...props}>
+              {children}
+            </code>
+          )
+        }
+
+        return (
+          <SyntaxHighlighter
+            language={language}
+            style={theme === 'dark' ? syntaxThemeDark : syntaxThemeLight}
+            className="docs-code-block"
+            customStyle={{
+              margin: '0.95rem 0',
+              borderRadius: '12px',
+              border: '1px solid color-mix(in srgb, var(--brand-main) 26%, var(--border-soft))',
+              padding: '0.95rem 1rem',
+              background:
+                'linear-gradient(160deg, color-mix(in srgb, var(--brand-main) 12%, var(--card-alt)) 0%, var(--card-alt) 58%)',
+              boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--brand-main) 24%, transparent)',
+            }}
+            codeTagProps={{
+              style: {
+                fontFamily: '"IBM Plex Mono", monospace',
+                fontSize: '0.88rem',
+              },
+            }}
+            wrapLongLines
+          >
+            {rawCode}
+          </SyntaxHighlighter>
+        )
+      },
+    }),
+    [theme],
+  )
 
   return (
     <article className="markdown-page">
@@ -343,4 +345,4 @@ function MarkdownPage({ doc, theme }: MarkdownPageProps) {
   )
 }
 
-export default MarkdownPage
+export default memo(MarkdownPage)

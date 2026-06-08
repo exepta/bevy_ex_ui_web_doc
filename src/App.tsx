@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import './App.css'
 import { listDocs, getDocMarkdown, latestVersion, type DocsLocale } from './docs/catalog'
 import MarkdownPage from './docs/MarkdownPage'
@@ -7,6 +7,16 @@ import { fetchAvailableVersions } from './docs/githubVersions'
 import { fetchRemoteDocsBundle, type RemoteDocsBundle } from './docs/githubDocs'
 import { t, type LanguageCode } from './i18n'
 import { createInitialExpanded, getDefaultEntry, type ActiveEntry } from './appState'
+
+type MarketplaceWidgetApi = {
+  setupMarketplaceWidget: (widgetType: string, pluginId: number, targetSelector: string) => void
+}
+
+declare global {
+  interface Window {
+    MarketplaceWidget?: MarketplaceWidgetApi
+  }
+}
 
 const DEFAULT_VERSION = latestVersion
 const DEFAULT_DOCS_LOCALE: DocsLocale = 'en_US'
@@ -20,6 +30,8 @@ const DEFAULT_LANGUAGE: LanguageCode = 'en-US'
 const DEFAULT_ACCENT_COLOR = '#195cc7'
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/
 const NO_VERSION_VALUE = '__no_version__'
+const MARKETPLACE_WIDGET_SCRIPT_ID = 'jetbrains-marketplace-widget-script'
+const MARKETPLACE_WIDGET_CONTAINER_ID = 'jetbrains-marketplace-widget'
 const ACCENT_COLOR_PRESET = [
   '#195cc7',
   '#ff5533',
@@ -105,6 +117,32 @@ const ACCENT_COLOR_SET = new Set(ACCENT_COLOR_OPTIONS.map((color) => color.toLow
 
 function getEntryLabel(entry: string) {
   return entry.replace(/^\d+_/, '')
+}
+
+function normalizeSearchValue(value: string) {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
+function compactSearchValue(value: string) {
+  return value.replace(/\s+/g, '')
+}
+
+function matchesSearchValue(value: string, normalizedQuery: string, compactQuery: string) {
+  const normalizedValue = normalizeSearchValue(value)
+  if (normalizedValue.includes(normalizedQuery)) {
+    return true
+  }
+
+  if (!compactQuery) {
+    return false
+  }
+
+  return compactSearchValue(normalizedValue).includes(compactQuery)
 }
 
 function getStorageValue(key: string) {
@@ -238,6 +276,7 @@ function App() {
   const [accentColor, setAccentColor] = useState<string>(() => normalizeAccentColor(getStorageValue(STORAGE_ACCENT_KEY)))
   const [isAccentOpen, setIsAccentOpen] = useState(false)
   const [isLanguageOpen, setIsLanguageOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => createInitialExpanded(initialDocs))
   const [remoteDocs, setRemoteDocs] = useState<RemoteDocsBundle | null>(null)
   const [isDocsLoading, setIsDocsLoading] = useState(true)
@@ -246,6 +285,69 @@ function App() {
   const effectiveRemoteDocs = selectedVersion === NO_VERSION_VALUE ? null : remoteDocs
   const localDocsNavigation = useMemo(() => listDocs(selectedVersion, docsLocale), [docsLocale, selectedVersion])
   const docsNavigation = effectiveRemoteDocs?.sections ?? localDocsNavigation
+  const docsByKey = useMemo(() => {
+    if (effectiveRemoteDocs?.docsByKey) {
+      return effectiveRemoteDocs.docsByKey
+    }
+
+    const local: Record<string, string> = {}
+    for (const section of localDocsNavigation) {
+      for (const entry of section.entries) {
+        const key = `${section.category}/${entry}`
+        local[key] = getDocMarkdown(selectedVersion, section.category, entry, docsLocale) ?? ''
+      }
+    }
+    return local
+  }, [docsLocale, effectiveRemoteDocs?.docsByKey, localDocsNavigation, selectedVersion])
+  const normalizedSearchQuery = normalizeSearchValue(searchQuery)
+  const compactSearchQuery = compactSearchValue(normalizedSearchQuery)
+  const isSearchActive = normalizedSearchQuery.length > 0
+  const searchResult = useMemo(() => {
+    if (!isSearchActive) {
+      return {
+        sections: docsNavigation,
+        totalMatches: docsNavigation.reduce((sum, section) => sum + section.entries.length, 0),
+        firstMatch: null as ActiveEntry | null,
+      }
+    }
+
+    let firstMatch: ActiveEntry | null = null
+    const sections = docsNavigation
+      .map((section) => {
+        const sectionMatch = matchesSearchValue(section.category, normalizedSearchQuery, compactSearchQuery)
+        const entries = sectionMatch
+          ? section.entries
+          : section.entries.filter((entry) => {
+              const label = getEntryLabel(entry)
+              const key = `${section.category}/${entry}`
+              const markdown = docsByKey[key] ?? ''
+              return (
+                matchesSearchValue(entry, normalizedSearchQuery, compactSearchQuery) ||
+                matchesSearchValue(label, normalizedSearchQuery, compactSearchQuery) ||
+                matchesSearchValue(markdown, normalizedSearchQuery, compactSearchQuery)
+              )
+            })
+
+        if (entries.length === 0) {
+          return null
+        }
+
+        if (!firstMatch) {
+          firstMatch = { category: section.category, entry: entries[0] }
+        }
+
+        return {
+          category: section.category,
+          entries,
+        }
+      })
+      .filter((section): section is { category: string; entries: string[] } => section !== null)
+
+    const totalMatches = sections.reduce((sum, section) => sum + section.entries.length, 0)
+    return { sections, totalMatches, firstMatch }
+  }, [compactSearchQuery, docsByKey, docsNavigation, isSearchActive, normalizedSearchQuery])
+  const displayedDocsNavigation = searchResult.sections
+  const isIdePluginEntry = activeEntry ? getEntryLabel(activeEntry.entry).toLowerCase() === 'ide-plugin' : false
 
   useEffect(() => {
     setExpandedSections((prev) => {
@@ -314,6 +416,46 @@ function App() {
       window.removeEventListener('keydown', onEscape)
     }
   }, [isAccentOpen])
+
+  useEffect(() => {
+    if (!isIdePluginEntry) {
+      return
+    }
+
+    const targetSelector = `#${MARKETPLACE_WIDGET_CONTAINER_ID}`
+    const target = document.querySelector<HTMLElement>(targetSelector)
+    if (!target) {
+      return
+    }
+
+    const setupWidget = () => {
+      if (!window.MarketplaceWidget) {
+        return
+      }
+      target.innerHTML = ''
+      window.MarketplaceWidget.setupMarketplaceWidget('install', 32154, targetSelector)
+    }
+
+    const existingScript = document.getElementById(MARKETPLACE_WIDGET_SCRIPT_ID) as HTMLScriptElement | null
+
+    if (existingScript) {
+      if (window.MarketplaceWidget) {
+        setupWidget()
+      } else {
+        existingScript.addEventListener('load', setupWidget, { once: true })
+      }
+      return () => existingScript.removeEventListener('load', setupWidget)
+    }
+
+    const script = document.createElement('script')
+    script.id = MARKETPLACE_WIDGET_SCRIPT_ID
+    script.src = 'https://plugins.jetbrains.com/assets/scripts/mp-widget.js'
+    script.async = true
+    script.addEventListener('load', setupWidget, { once: true })
+    document.body.appendChild(script)
+
+    return () => script.removeEventListener('load', setupWidget)
+  }, [isIdePluginEntry])
 
   useEffect(() => {
     let ignore = false
@@ -415,11 +557,29 @@ function App() {
     setIsAccentOpen(false)
   }
 
+  const handleSearchKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter' || !isSearchActive) {
+      return
+    }
+
+    const firstMatch = searchResult.firstMatch
+    if (!firstMatch) {
+      return
+    }
+
+    setActiveEntry(firstMatch)
+    setExpandedSections((prev) => ({
+      ...prev,
+      [firstMatch.category]: true,
+    }))
+  }
+
   const ThemeToggleIcon = theme === 'light' ? MoonIcon : SunIcon
   const themeToggleLabel = theme === 'light' ? t(language, 'theme_to_dark') : t(language, 'theme_to_light')
   const accentColorButtonAria = t(language, 'accent_color_button_aria')
   const accentColorPickerAria = t(language, 'accent_color_picker_aria')
   const accentColorDialogAria = t(language, 'accent_color_dialog_aria')
+  const pluginReleasesButtonAria = t(language, 'plugin_releases_button_aria')
   const noVersionLabel = t(language, 'no_version_option')
   const isGerman = language === 'de-DE'
   const LanguageFlagIcon = isGerman ? GermanyFlagIcon : UsFlagIcon
@@ -465,6 +625,9 @@ function App() {
             type="search"
             placeholder={t(language, 'search_placeholder')}
             aria-label={t(language, 'search_placeholder')}
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            onKeyDown={handleSearchKeyDown}
           />
 
           <div className="language-menu">
@@ -529,24 +692,30 @@ function App() {
 
           <nav aria-label="Documentation navigation">
             <ul className="nav-list">
-              {docsNavigation.map((section) => (
+              {displayedDocsNavigation.map((section) => {
+                const sectionExpanded = isSearchActive ? true : Boolean(expandedSections[section.category])
+                return (
                 <li key={section.category} className="nav-group">
                   <button
                     type="button"
                     className="group-title group-toggle"
-                    aria-expanded={Boolean(expandedSections[section.category])}
-                    onClick={() => toggleSection(section.category)}
+                    aria-expanded={sectionExpanded}
+                    onClick={() => {
+                      if (!isSearchActive) {
+                        toggleSection(section.category)
+                      }
+                    }}
                   >
                     <span>{section.category}</span>
                     <span
-                      className={`group-chevron ${expandedSections[section.category] ? 'expanded' : ''}`}
+                      className={`group-chevron ${sectionExpanded ? 'expanded' : ''}`}
                       aria-hidden="true"
                     >
                       <ChevronDownIcon />
                     </span>
                   </button>
 
-                  {expandedSections[section.category] ? (
+                  {sectionExpanded ? (
                     <ul className="entry-list">
                       {section.entries.map((entry) => {
                         const isActive = activeEntry?.category === section.category && activeEntry.entry === entry
@@ -565,8 +734,12 @@ function App() {
                     </ul>
                   ) : null}
                 </li>
-              ))}
+                )
+              })}
             </ul>
+            {isSearchActive && searchResult.totalMatches === 0 ? (
+              <p className="search-empty">{language === 'de-DE' ? 'Keine Treffer' : 'No matches'}</p>
+            ) : null}
           </nav>
         </aside>
 
@@ -576,6 +749,15 @@ function App() {
               <>
                 <p className="breadcrumb">{breadcrumb}</p>
                 <MarkdownPage doc={parsedDoc} theme={theme} />
+                {isIdePluginEntry ? (
+                  <section className="marketplace-widget-section">
+                    <div
+                      id={MARKETPLACE_WIDGET_CONTAINER_ID}
+                      className="marketplace-widget"
+                      aria-label={pluginReleasesButtonAria}
+                    />
+                  </section>
+                ) : null}
               </>
             ) : (
               <section className="docs-section">
